@@ -1,5 +1,8 @@
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/4832/badge.svg)](https://scan.coverity.com/projects/wal2json)
 
+Reference 
+https://www.postgresql.org/docs/9.6/static/logicaldecoding-output-plugin.html
+
 Introduction
 ============
 
