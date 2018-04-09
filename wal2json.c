@@ -515,29 +515,29 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			appendStringInfoString(&colvalues, "\"keyvalues\":[");
 		}
 	}
-	else
-	{
-		if (data->pretty_print)
-		{
-			appendStringInfoString(&colnames, "\t\t\t\"columnnames\": [");
-			appendStringInfoString(&coltypes, "\t\t\t\"columntypes\": [");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\t\t\t\"columntypeoids\": [");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "\t\t\t\"columnoptionals\": [");
-			appendStringInfoString(&colvalues, "\t\t\t\"columnvalues\": [");
-		}
-		else
-		{
-			appendStringInfoString(&colnames, "\"columnnames\":[");
-			appendStringInfoString(&coltypes, "\"columntypes\":[");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
-			appendStringInfoString(&colvalues, "\"columnvalues\":[");
-		}
-	}
+// 	else
+// 	{
+// 		if (data->pretty_print)
+// 		{
+// 			appendStringInfoString(&colnames, "\t\t\t\"columnnames\": [");
+// 			appendStringInfoString(&coltypes, "\t\t\t\"columntypes\": [");
+// 			if (data->include_type_oids)
+// 				appendStringInfoString(&coltypeoids, "\t\t\t\"columntypeoids\": [");
+// 			if (data->include_not_null)
+// 				appendStringInfoString(&colnotnulls, "\t\t\t\"columnoptionals\": [");
+// 			appendStringInfoString(&colvalues, "\t\t\t\"columnvalues\": [");
+// 		}
+// 		else
+// 		{
+// 			appendStringInfoString(&colnames, "\"columnnames\":[");
+// 			appendStringInfoString(&coltypes, "\"columntypes\":[");
+// 			if (data->include_type_oids)
+// 				appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
+// 			if (data->include_not_null)
+// 				appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
+// 			appendStringInfoString(&colvalues, "\"columnvalues\":[");
+// 		}
+// 	}
 
 	/* Print column information (name, type, value) */
 	for (natt = 0; natt < tupdesc->natts; natt++)
