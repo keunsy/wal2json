@@ -90,23 +90,23 @@ _PG_init(void)
 {
 }
 
-/* Specify output plugin callbacks */
+/* Specify output plugin callbacks 指定PG插件必须需要实现的方法在本程序的对照*/
 void
 _PG_output_plugin_init(OutputPluginCallbacks *cb)
 {
 	AssertVariableIsOfType(&_PG_output_plugin_init, LogicalOutputPluginInit);
 
 	cb->startup_cb = pg_decode_startup;
-	cb->begin_cb = pg_decode_begin_txn;
-	cb->change_cb = pg_decode_change;
-	cb->commit_cb = pg_decode_commit_txn;
+	cb->begin_cb = pg_decode_begin_txn;//必须
+	cb->change_cb = pg_decode_change;//必须
+	cb->commit_cb = pg_decode_commit_txn;//必须
 	cb->shutdown_cb = pg_decode_shutdown;
 #if	PG_VERSION_NUM >= 90600
 	cb->message_cb = pg_decode_message;
 #endif
 }
 
-/* Initialize this plugin */
+/* Initialize this plugin 初始化插件，参数读取配置；当slot被创建或变更流触发情况下调用此方法*/
 static void
 pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is_init)
 {
@@ -362,17 +362,17 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 	}
 }
 
-/* cleanup this plugin's resources */
+/* cleanup this plugin's resources 解码完毕，清除本插件资源*/
 static void
 pg_decode_shutdown(LogicalDecodingContext *ctx)
 {
-	JsonDecodingData *data = ctx->output_plugin_private;
+	JsonDecodingData *data = ctx->output_plugin_private;//pg提供的本插件资源
 
 	/* cleanup our own resources via memory context reset */
 	MemoryContextDelete(data->context);
 }
 
-/* BEGIN callback */
+/* BEGIN callback 事务开始并解码时调用，用作起始信息的拼接*/
 static void
 pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 {
@@ -421,11 +421,11 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 	else
 		appendStringInfoString(ctx->out, "\"change\":[");
 
-	if (data->write_in_chunks)
+	if (data->write_in_chunks)//如果使用了chunk选项，则立马输出成行
 		OutputPluginWrite(ctx, true);
 }
 
-/* COMMIT callback */
+/* COMMIT callback  事务提交解码时调用，用作结束信息拼接*/
 static void
 pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 					 XLogRecPtr commit_lsn)
@@ -463,8 +463,9 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 /*
  * Accumulate tuple information and stores it at the end
  *
- * replident: is this tuple a replica identity?
+ * replident: is this tuple a replica identity? 
  * hasreplident: does this tuple has an associated replica identity?
+ * 用于change内容数据的拼接，将数组内容转化为相应的格式
  */
 static void
 tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc, bool replident, bool hasreplident)
@@ -492,7 +493,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	/*
 	 * If replident is true, it will output info about replica identity. In this
 	 * case, there are special JSON objects for it. Otherwise, it will print new
-	 * tuple data.
+	 * tuple data.  
 	 */
 	if (replident)
 	{
@@ -515,29 +516,29 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			appendStringInfoString(&colvalues, "\"keyvalues\":[");
 		}
 	}
-// 	else
-// 	{
-// 		if (data->pretty_print)
-// 		{
-// 			appendStringInfoString(&colnames, "\t\t\t\"columnnames\": [");
-// 			appendStringInfoString(&coltypes, "\t\t\t\"columntypes\": [");
-// 			if (data->include_type_oids)
-// 				appendStringInfoString(&coltypeoids, "\t\t\t\"columntypeoids\": [");
-// 			if (data->include_not_null)
-// 				appendStringInfoString(&colnotnulls, "\t\t\t\"columnoptionals\": [");
-// 			appendStringInfoString(&colvalues, "\t\t\t\"columnvalues\": [");
-// 		}
-// 		else
-// 		{
-// 			appendStringInfoString(&colnames, "\"columnnames\":[");
-// 			appendStringInfoString(&coltypes, "\"columntypes\":[");
-// 			if (data->include_type_oids)
-// 				appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
-// 			if (data->include_not_null)
-// 				appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
-// 			appendStringInfoString(&colvalues, "\"columnvalues\":[");
-// 		}
-// 	}
+	else
+	{
+		if (data->pretty_print)
+		{
+			appendStringInfoString(&colnames, "\t\t\t\"columnnames\": [");
+			appendStringInfoString(&coltypes, "\t\t\t\"columntypes\": [");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "\t\t\t\"columntypeoids\": [");
+			if (data->include_not_null)
+				appendStringInfoString(&colnotnulls, "\t\t\t\"columnoptionals\": [");
+			appendStringInfoString(&colvalues, "\t\t\t\"columnvalues\": [");
+		}
+		else
+		{
+			appendStringInfoString(&colnames, "\"columnnames\":[");
+			appendStringInfoString(&coltypes, "\"columntypes\":[");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
+			if (data->include_not_null)
+				appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
+			appendStringInfoString(&colvalues, "\"columnvalues\":[");
+		}
+	}
 
 	/* Print column information (name, type, value) */
 	for (natt = 0; natt < tupdesc->natts; natt++)
@@ -565,11 +566,11 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		elog(DEBUG1, "attribute \"%s\" (%d/%d)", NameStr(attr->attname), natt, tupdesc->natts);
 
-		/* Do not print dropped or system columns */
+		/* Do not print dropped or system columns  ？？？？考虑是否在此处进行字段过滤*/
 		if (attr->attisdropped || attr->attnum < 0)
 			continue;
 
-		/* Search indexed columns in whole heap tuple */
+		/* Search indexed columns in whole heap tuple  在数组中找索引字段位置*/
 		if (indexdesc != NULL)
 		{
 			int		j;
@@ -817,7 +818,7 @@ identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple
 	tuple_to_stringinfo(ctx, tupdesc, tuple, indexdesc, true, false);
 }
 
-/* Callback for individual changed tuples */
+/* Callback for individual changed tuples ，change内容操作起始点*/
 static void
 pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				 Relation relation, ReorderBufferChange *change)
@@ -1044,11 +1045,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
 			/* Print the new tuple */
-			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);
+// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);//myupdate 控制不输出一般信息
+			// fixme 此处可考虑加入新的索引信息
 			break;
 		case REORDER_BUFFER_CHANGE_UPDATE:
 			/* Print the new tuple */
-			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, true);
+// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, true);//myupdate 控制不输出一般信息
 
 			/*
 			 * The old tuple is available when:
