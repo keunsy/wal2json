@@ -614,14 +614,14 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		if (isnull || typisvarlena)
 			continue;
 		
+		outputstr = OidOutputFunctionCall(typoutput, origval);
+		
 // 		myupdate
 		if(cmptuple != NULL && !replident ){
 
 			char				*cmpgvalstr = NULL;
 			bool				iscmpnull;		
-			Datum				cmpgval;
-			
-			outputstr = OidOutputFunctionCall(typoutput, origval);
+			Datum				cmpgval;		
 
 			cmpgval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
 			cmpgvalstr = OidOutputFunctionCall(typoutput, cmpgval);
@@ -1105,6 +1105,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			else
 			{
 				elog(DEBUG1, "old tuple is not null");
+				elog(WARNING, "old tuple is not null ======================");//myupdate
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple,&change->data.tp.newtuple->tuple, NULL);
 			}
 			break;
