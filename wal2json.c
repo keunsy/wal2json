@@ -468,7 +468,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
  * 用于change内容数据的拼接，将数组内容转化为相应的格式
  */
 static void
-tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc, bool replident, bool hasreplident)
+tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc, bool replident, bool hasreplident)
 {
 	JsonDecodingData	*data;
 	int					natt;
@@ -552,6 +552,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		Datum				val;		/* definitely detoasted Datum */
 		char				*outputstr = NULL;
 		bool				isnull;		/* column is null? */
+		bool				iscmpnull;		/* column is null? */
 
 		/*
 		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
@@ -607,8 +608,22 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		/* Get information needed for printing values of a type */
 		getTypeOutputInfo(typid, &typoutput, &typisvarlena);
 
-		/* Get Datum from tuple */
+		/* Get Datum from tuple  myudpate*/ 
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
+		
+		if(cmptuple != NULL){
+		
+			origvalstr = OidOutputFunctionCall(typoutput, origval);
+
+			cmpgval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
+			cmpgvalstr = OidOutputFunctionCall(typoutput, cmpgval);
+
+			elog(WARNING, "origval \"%s\"", origvalstr);
+			elog(WARNING, "cmpgvalstr \"%s\"", cmpgvalstr);
+
+			if(!iscmpnull && strcmp(origvalstr, cmpgvalstr) == 0 )
+				coutinue;
+		}	
 
 		/* Skip nulls iif printing key/identity */
 		if (isnull && replident)
@@ -805,9 +820,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 /* Print columns information */
 static void
-columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, bool hasreplident)
+columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, HeapTuple cmptuple, bool hasreplident)
 {
-	tuple_to_stringinfo(ctx, tupdesc, tuple, NULL, false, hasreplident);
+	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, NULL, false, hasreplident);
 }
 
 /* Print replica identity information */
@@ -815,7 +830,7 @@ static void
 identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc)
 {
 	/* Last parameter does not matter */
-	tuple_to_stringinfo(ctx, tupdesc, tuple, indexdesc, true, false);
+	tuple_to_stringinfo(ctx, tupdesc, tuple, NULL, indexdesc, true, false);
 }
 
 /* Callback for individual changed tuples ，change内容操作起始点*/
@@ -1045,7 +1060,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
 			/* Print the new tuple */
-// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);
+			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL , false);
 			//myupdate 加入新的索引信息 		
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
 			if (indexrel != NULL)
@@ -1067,7 +1082,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 		case REORDER_BUFFER_CHANGE_UPDATE:
 			/* Print the new tuple */
-// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, true);//myupdate 控制不输出一般信息
+ 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, &change->data.tp.oldtuple->tuple, true);//myupdate 控制不输出一般信息
 
 			/*
 			 * The old tuple is available when:
@@ -1077,11 +1092,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			 *
 			 * FIXME if old tuple is not available we must get only the indexed
 			 * columns (the whole tuple is printed).
-			 */
-			elog(WARNING, "new tuple data for INSERT in table \"%s\"",change->data.tp.newtuple);
-			elog(WARNING, "old tuple data for INSERT in table \"%s\"",change->data.tp.oldtuple);
-			
-			
+			 */						
 			if (change->data.tp.oldtuple == NULL)
 			{
 				
