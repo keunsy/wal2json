@@ -552,7 +552,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		Datum				val;		/* definitely detoasted Datum */
 		char				*outputstr = NULL;
 		bool				isnull;		/* column is null? */
-		bool				iscmpnull;		/* column is null? */
 
 		/*
 		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
@@ -612,7 +611,11 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 		
 		if(cmptuple != NULL){
-		
+			char				*outputstr = NULL;
+			char				*cmpgvalstr = NULL;
+			bool				iscmpnull;		
+			Datum				cmpgval;
+			
 			origvalstr = OidOutputFunctionCall(typoutput, origval);
 
 			cmpgval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
@@ -622,7 +625,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			elog(WARNING, "cmpgvalstr \"%s\"", cmpgvalstr);
 
 			if(!iscmpnull && strcmp(origvalstr, cmpgvalstr) == 0 )
-				coutinue;
+				continue;
+			
 		}	
 
 		/* Skip nulls iif printing key/identity */
