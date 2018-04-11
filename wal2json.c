@@ -1046,8 +1046,25 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 		case REORDER_BUFFER_CHANGE_INSERT:
 			/* Print the new tuple */
 // 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);//myupdate 控制不输出一般信息
-			// fixme 此处可考虑加入新的索引信息
+			//myupdate 此处可考虑加入新的索引信息 
+			indexrel = RelationIdGetRelation(relation->rd_replidindex);
+			if (indexrel != NULL)
+			{
+				indexdesc = RelationGetDescr(indexrel);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, indexdesc);
+				RelationClose(indexrel);
+			}
+			else
+			{
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL);
+			}
+
+			if (change->data.tp.newtuple == NULL)
+				elog(DEBUG1, "new tuple is null");
+			else
+				elog(DEBUG1, "new tuple is not null");
 			break;
+
 		case REORDER_BUFFER_CHANGE_UPDATE:
 			/* Print the new tuple */
 // 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, true);//myupdate 控制不输出一般信息
