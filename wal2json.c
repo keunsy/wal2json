@@ -610,6 +610,10 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		/* Get Datum from tuple  myudpate*/ 
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 		
+		/* Skip nulls iif printing key/identity */
+		if (isnull && replident)
+			continue;
+		
 		if(cmptuple != NULL){
 			char				*origvalstr = NULL;
 			char				*cmpgvalstr = NULL;
@@ -625,13 +629,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			elog(WARNING, "cmpgvalstr \"%s\"", cmpgvalstr);
 
 			if(!iscmpnull && strcmp(origvalstr, cmpgvalstr) == 0 )
-				continue;
-			
+				continue;			
 		}	
 
-		/* Skip nulls iif printing key/identity */
-		if (isnull && replident)
-			continue;
 
 		if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval) && !data->include_unchanged_toast)
 		{
