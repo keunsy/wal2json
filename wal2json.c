@@ -1047,16 +1047,19 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			/* Print the new tuple */
 // 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);//myupdate 控制不输出一般信息
 			//myupdate 此处可考虑加入新的索引信息 
+			
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
 			if (indexrel != NULL)
 			{
 				indexdesc = RelationGetDescr(indexrel);
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, indexdesc);
 				RelationClose(indexrel);
+				elog(WARNING, "111111111");//myupdate
 			}
 			else
 			{
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL);
+				elog(WARNING, "222222222");//myupdate
 			}
 
 			if (change->data.tp.newtuple == NULL)
