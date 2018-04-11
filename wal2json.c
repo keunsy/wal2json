@@ -1049,6 +1049,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			//myupdate 此处可考虑加入新的索引信息 
 			
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
+			elog(WARNING, "0000000");//myupdate
 			if (indexrel != NULL)
 			{
 				indexdesc = RelationGetDescr(indexrel);
