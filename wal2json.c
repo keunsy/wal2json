@@ -1045,7 +1045,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
 			/* Print the new tuple */
-// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);//myupdate 控制不输出一般信息
+// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);
 			//myupdate 加入新的索引信息 		
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
 			if (indexrel != NULL)
@@ -1078,8 +1078,13 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			 * FIXME if old tuple is not available we must get only the indexed
 			 * columns (the whole tuple is printed).
 			 */
+			elog(WARNING, "new tuple data for INSERT in table \"%s\"",change->data.tp.newtuple);
+			elog(WARNING, "old tuple data for INSERT in table \"%s\"",change->data.tp.oldtuple);
+			
+			
 			if (change->data.tp.oldtuple == NULL)
 			{
+				
 				elog(DEBUG1, "old tuple is null");
 
 				indexrel = RelationIdGetRelation(relation->rd_replidindex);
