@@ -610,36 +610,31 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		/* Get Datum from tuple  myudpate*/ 
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 		
-		/* Skip nulls iif printing key/identity  myupdate 如果是空值则直接跳过*/
-		if (isnull)
+		/* myupdate如果是空值或者大量的数据则直接跳过*/
+		if (isnull || typisvarlena)
 			continue;
 		
 // 		myupdate
 		if(cmptuple != NULL && !replident ){
-			char				*origvalstr = NULL;
+
 			char				*cmpgvalstr = NULL;
 			bool				iscmpnull;		
 			Datum				cmpgval;
 			
-			origvalstr = OidOutputFunctionCall(typoutput, origval);
+			outputstr = OidOutputFunctionCall(typoutput, origval);
 
 			cmpgval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
 			cmpgvalstr = OidOutputFunctionCall(typoutput, cmpgval);
 
-			elog(WARNING, "origval \"%s\"", origvalstr);
+			elog(WARNING, "origval \"%s\"", outputstr);
 			elog(WARNING, "cmpgvalstr \"%s\"", cmpgvalstr);
 
-			if(!iscmpnull && strcmp(origvalstr, cmpgvalstr) == 0 )
+			if(!iscmpnull && strcmp(outputstr, cmpgvalstr) == 0 )
 				continue;			
 		}	
 
+		//myupdate remove toast value
 
-		if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval) && !data->include_unchanged_toast)
-		{
-			/* TOAST value is not returned if include-unchanged-toast is specified */
-			elog(DEBUG2, "column \"%s\" has an unchanged TOAST - excluding", NameStr(attr->attname));
-			continue;
-		}
 
 		/* Accumulate each column info */
 		appendStringInfoString(&colnames, comma);
@@ -678,19 +673,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		ReleaseSysCache(type_tuple);
 
-		if (isnull)
-		{
-			appendStringInfo(&colvalues, "%snull", comma);
-		}
-		else
-		{
-			if (typisvarlena)
-				val = PointerGetDatum(PG_DETOAST_DATUM(origval));
-			else
-				val = origval;
-
-			/* Finally got the value */
-			outputstr = OidOutputFunctionCall(typoutput, val);
 
 			/*
 			 * Data types are printed with quotes unless they are number, true,
@@ -736,7 +718,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 					escape_json(&colvalues, outputstr);
 					break;
 			}
-		}
 
 		/* The first column does not have comma */
 		if (strcmp(comma, "") == 0)
@@ -1064,8 +1045,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	switch (change->action)
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
-			/* Print the new tuple */
-			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL , false);
+			/* Print the new tuple myupdate*/
+// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL , false);
 			//myupdate 加入新的索引信息 		
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
 			if (indexrel != NULL)
