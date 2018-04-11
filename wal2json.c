@@ -622,8 +622,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			
 		
 		elog(WARNING, "1111111111111111111");
-// 		myupdate
-		if(cmptuple != NULL && !replident ){
+// 		myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤） 如果判断是否主键
+		if(cmptuple != NULL){
 
 			char				*cmpgvalstr = NULL;
 			bool				iscmpnull;		
