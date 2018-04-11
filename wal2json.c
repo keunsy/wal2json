@@ -565,7 +565,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		elog(DEBUG1, "attribute \"%s\" (%d/%d)", NameStr(attr->attname), natt, tupdesc->natts);
 
-		/* Do not print dropped or system columns  ？？？？考虑是否在此处进行字段过滤*/
+		/* Do not print dropped or system columns */
 		if (attr->attisdropped || attr->attnum < 0)
 			continue;
 
@@ -595,7 +595,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			if (!found_col)
 				continue;
 		}
-
+		elog(WARNING, "0000000000000");
+		
+		
 		typid = attr->atttypid;
 
 		/* Figure out type name */
@@ -610,11 +612,16 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 		
 		/* myupdate如果是空值或者大量的数据则直接跳过*/
-		if (isnull || typisvarlena)
+		if (isnull)
+			continue;
+		
+		if (typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval))
 			continue;
 		
 		outputstr = OidOutputFunctionCall(typoutput, origval);
+			
 		
+		elog(WARNING, "1111111111111111111");
 // 		myupdate
 		if(cmptuple != NULL && !replident ){
 
@@ -635,6 +642,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		//myupdate remove toast value
 
 
+		elog(WARNING, "2222222222222");
 		/* Accumulate each column info */
 		appendStringInfoString(&colnames, comma);
 		escape_json(&colnames, NameStr(attr->attname));
@@ -794,6 +802,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		appendStringInfoString(ctx->out, colnotnulls.data);
 	appendStringInfoString(ctx->out, colvalues.data);
 
+	
+		elog(WARNING, "33333333333333333333");
+	
 	pfree(colnames.data);
 	pfree(coltypes.data);
 	if (data->include_type_oids)
