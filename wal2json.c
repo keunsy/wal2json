@@ -611,11 +611,11 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 		
 		/* Skip nulls iif printing key/identity  myupdate 如果是空值则直接跳过*/
-		if (isnull || replident)
+		if (isnull)
 			continue;
 		
 // 		myupdate
-		if(cmptuple != NULL){
+		if(cmptuple != NULL && !replident ){
 			char				*origvalstr = NULL;
 			char				*cmpgvalstr = NULL;
 			bool				iscmpnull;		
@@ -832,10 +832,10 @@ columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple 
 
 /* Print replica identity information */
 static void
-identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc)
+identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc)
 {
 	/* Last parameter does not matter */
-	tuple_to_stringinfo(ctx, tupdesc, tuple, NULL, indexdesc, true, false);
+	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, indexdesc, true, false);
 }
 
 /* Callback for individual changed tuples ，change内容操作起始点*/
@@ -1071,12 +1071,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			if (indexrel != NULL)
 			{
 				indexdesc = RelationGetDescr(indexrel);
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, indexdesc);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
 			}
 
 			if (change->data.tp.newtuple == NULL)
@@ -1087,8 +1087,14 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 		case REORDER_BUFFER_CHANGE_UPDATE:
 			/* Print the new tuple */
- 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, &change->data.tp.oldtuple->tuple, true);//myupdate 控制不输出一般信息
-
+			if (change->data.tp.oldtuple == NULL)
+			{
+ 				columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL, true);//myupdate 控制不输出一般信息
+			}
+			else
+			{
+				columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, &change->data.tp.oldtuple->tuple, true);//myupdate 控制不输出一般信息
+			}
 			/*
 			 * The old tuple is available when:
 			 * (i) pk changes;
@@ -1107,18 +1113,18 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				if (indexrel != NULL)
 				{
 					indexdesc = RelationGetDescr(indexrel);
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, indexdesc);
+					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
 					RelationClose(indexrel);
 				}
 				else
 				{
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL);
+					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
 				}
 			}
 			else
 			{
 				elog(DEBUG1, "old tuple is not null");
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple,&change->data.tp.newtuple->tuple, NULL);
 			}
 			break;
 		case REORDER_BUFFER_CHANGE_DELETE:
@@ -1127,12 +1133,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			if (indexrel != NULL)
 			{
 				indexdesc = RelationGetDescr(indexrel);
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, indexdesc);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, indexdesc);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, NULL);
 			}
 
 			if (change->data.tp.oldtuple == NULL)
