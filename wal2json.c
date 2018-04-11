@@ -614,7 +614,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		if (isnull && replident)
 			continue;
 		
-		if(cmptuple != NULL){
+		if(cmptuple != NULL && origval!= NULL){
 			char				*origvalstr = NULL;
 			char				*cmpgvalstr = NULL;
 			bool				iscmpnull;		
