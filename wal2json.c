@@ -611,7 +611,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 		
 		if(cmptuple != NULL){
-			char				*outputstr = NULL;
+			char				*origvalstr = NULL;
 			char				*cmpgvalstr = NULL;
 			bool				iscmpnull;		
 			Datum				cmpgval;
