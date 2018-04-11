@@ -610,11 +610,12 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		/* Get Datum from tuple  myudpate*/ 
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 		
-		/* Skip nulls iif printing key/identity */
-		if (isnull && replident)
+		/* Skip nulls iif printing key/identity  myupdate 如果是空值则直接跳过*/
+		if (isnull || replident)
 			continue;
 		
-		if(cmptuple != NULL && origval != NULL){
+// 		myupdate
+		if(cmptuple != NULL){
 			char				*origvalstr = NULL;
 			char				*cmpgvalstr = NULL;
 			bool				iscmpnull;		
