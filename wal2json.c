@@ -549,7 +549,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		Oid					typoutput;	/* output function */
 		bool				typisvarlena;
 		Datum				origval;	/* possibly toasted Datum */
-		Datum				val;		/* definitely detoasted Datum */
 		char				*outputstr = NULL;
 		bool				isnull;		/* column is null? */
 
