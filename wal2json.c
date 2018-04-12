@@ -602,8 +602,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		elog(WARNING, "2");
 		if(cmptuple != NULL){ 
 			cmpval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
-			elog(WARNING, "22");
-			cmpvalstr = OidOutputFunctionCall(typoutput, cmpval);
+
 		}
 		elog(WARNING, "3");
 		
@@ -615,6 +614,10 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			continue;
 		
 		outputstr = OidOutputFunctionCall(typoutput, origval);
+		if(cmptuple != NULL){ 
+			elog(WARNING, "33");
+			cmpvalstr = OidOutputFunctionCall(typoutput, cmpval);
+		}
 
 		attname = NameStr(attr->attname);
 		isFilterAtt = strcmp(attname, "id") == 0 || strcmp(attname, "tenant_id") == 0 || strcmp(attname, "ei") == 0 || strcmp(attname, "describe_id") == 0;
