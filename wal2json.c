@@ -565,6 +565,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 #endif
 
 				if (strcmp(NameStr(attr->attname), NameStr(iattr->attname)) == 0)
+					elog(WARNING, "attr \"%s\"" ,NameStr(attr->attname));
+					elog(WARNING, "iattr \"%s\"" ,NameStr(iattr->attname));
 					found_col = true;
 			}
 			/* Print only indexed columns */
@@ -602,10 +604,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 			cmpgval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
 			cmpgvalstr = OidOutputFunctionCall(typoutput, cmpgval);
-
-			elog(WARNING, "origval \"%s\"", outputstr);
-			elog(WARNING, "cmpgvalstr \"%s\"", cmpgvalstr);
-
 			if(!iscmpnull && strcmp(outputstr, cmpgvalstr) == 0 )
 				continue;			
 		}	
@@ -962,13 +960,15 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			//myupdate 加入新的索引信息 		
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
 			if (indexrel != NULL)
-			{
+			{	
+				elog(WARNING, "00000000000");
 				indexdesc = RelationGetDescr(indexrel);
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
 				RelationClose(indexrel);
 			}
 			else
 			{
+				elog(WARNING, "11111111");
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
 			}
 
