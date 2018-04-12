@@ -538,9 +538,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		
 		char			*attname = NULL;
 		bool    		isFilterAtt;
-		Datum			cmpval;
-		bool			iscmpnull;	
-		char			*cmpvalstr = NULL;	
 
 		/*
 		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
@@ -597,15 +594,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		getTypeOutputInfo(typid, &typoutput, &typisvarlena);
 
 		/* Get Datum from tuple  myudpate*/ 
-		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
-		//必须跟紧取值，否则continue过多会报错
-		elog(WARNING, "2");
-		if(cmptuple != NULL){ 
-			cmpval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
-
-		}
-		elog(WARNING, "3");
-		
+		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);		
 		
 		/* myupdate如果是空值或者大量的数据（外部存储）则直接跳过*/
 		if (isnull)
@@ -614,10 +603,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			continue;
 		
 		outputstr = OidOutputFunctionCall(typoutput, origval);
-		if(cmptuple != NULL){ 
-			elog(WARNING, "33");
-			cmpvalstr = OidOutputFunctionCall(typoutput, cmpval);
-		}
 
 		attname = NameStr(attr->attname);
 		isFilterAtt = strcmp(attname, "id") == 0 || strcmp(attname, "tenant_id") == 0 || strcmp(attname, "ei") == 0 || strcmp(attname, "describe_id") == 0;
@@ -630,9 +615,17 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		elog(WARNING, "4");
 		// myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤）
 		if(cmptuple != NULL && !isFilterAtt){
+			Datum			cmpval;
+			bool			iscmpnull;	
+			char			*cmpvalstr = NULL;	
+			
+			cmpval = heap_getattr(cmptuple, natt, tupdesc, &iscmpnull);
 
+			cmpvalstr = OidOutputFunctionCall(typoutput, cmpval);
 			if(!iscmpnull && strcmp(outputstr, cmpvalstr) == 0 )
-				continue;			
+				continue;
+		
+						
 		}	
 
 		elog(WARNING, "6");
