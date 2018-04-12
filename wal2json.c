@@ -606,7 +606,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		char	*attname = NULL;
 		bool    isFilterAtt;
 		attname = NameStr(attr->attname);
-		isFilterAtt = strcmp(attname, 'id') == 0 || strcmp(attname, 'tenant_id') == 0 || strcmp(attname, 'ei') == 0 || strcmp(attname, 'describe_id') == 0;
+		isFilterAtt = strcmp(attname, "id") == 0 || strcmp(attname, "tenant_id") == 0 || strcmp(attname, "ei") == 0 || strcmp(attname, "describe_id") == 0;
 
 		// myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤）
 		if(cmptuple != NULL && !replident && !isFilterAtt){
