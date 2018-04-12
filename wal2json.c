@@ -609,33 +609,22 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		if(cmptuple == NULL && !isFilterAtt){
 			continue;
 		}
-		
-		elog(WARNING, " \"%s\"" ,attname);
-		
-		elog(WARNING, "4");
+
 		// myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤）
 		if(cmptuple != NULL && !isFilterAtt){
 			Datum			cmpval;
 			bool			iscmpnull;	
-// 			char			*cmpvalstr = NULL;	
 			
 			cmpval = heap_getattr(cmptuple, natt+1, tupdesc, &iscmpnull);
-			elog(WARNING, "44");
-// 			cmpvalstr = OidOutputFunctionCall(typoutput, cmpval);
 			if(!iscmpnull && strcmp(outputstr, OidOutputFunctionCall(typoutput, cmpval)) == 0 )
-				continue;
-		
-						
+				continue;			
 		}	
 
-		elog(WARNING, "6");
 		/* Accumulate each column info */
 		appendStringInfoString(&colnames, comma);
 		escape_json(&colnames, NameStr(attr->attname));
 
 		ReleaseSysCache(type_tuple);
-
-		elog(WARNING, "7");
 		/*
 		 * Data types are printed with quotes unless they are number, true,
 		 * false, null, an array or an object.
