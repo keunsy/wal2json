@@ -958,7 +958,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			/* Print the new tuple myupdate*/
 // 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL , false);
 			//myupdate 加入新的索引信息 		
-			elog(WARNING, "rd_pkindex \"%s\"",relation->rd_pkindex);
+			elog(WARNING, "rd_pkindex \"%s\"",strVal(relation));
 			elog(WARNING,"rd_replidindex \"%s\"", relation->rd_replidindex);
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
 			if (indexrel != NULL)
@@ -1019,7 +1019,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			else
 			{
 				elog(DEBUG1, "old tuple is not null");
-				elog(WARNING, "old tuple is not null ======================");//myupdate
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple,&change->data.tp.newtuple->tuple, NULL);
 			}
 			break;
@@ -1028,12 +1027,14 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
 			if (indexrel != NULL)
 			{
+				elog(WARNING, "00000000000");
 				indexdesc = RelationGetDescr(indexrel);
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, indexdesc);
 				RelationClose(indexrel);
 			}
 			else
 			{
+				elog(WARNING, "1111111111111");
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, NULL);
 			}
 
