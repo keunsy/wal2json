@@ -486,7 +486,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	if(cmptuple == NULL && !replident){
 		return;
 	}
-	elog(WARNING, "0");
 	
 	data = ctx->output_plugin_private;
 
@@ -498,9 +497,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		initStringInfo(&colnotnulls);
 	initStringInfo(&colvalues);
 	
-	elog(WARNING, "1");
-
-
 	/*
 	 * If replident is true, it will output info about replica identity. In this
 	 * case, there are special JSON objects for it. Otherwise, it will print new
@@ -528,7 +524,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		appendStringInfoString(&colvalues, "\"columnvalues\":[");
 	}
 
-	elog(WARNING, "2");
 	/* Print column information (name, type, value) */
 	for (natt = 0; natt < tupdesc->natts; natt++)
 	{
@@ -543,6 +538,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		
 		char			*attname = NULL;
 		bool    		isFilterAtt;
+		Datum			cmpgval;
 
 		/*
 		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
@@ -600,6 +596,13 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		/* Get Datum from tuple  myudpate*/ 
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
+		//必须跟紧取值，否则continue过多会报错
+		elog(WARNING, "2");
+		if(cmptuple != NULL){ 
+			cmpgval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
+		}
+		elog(WARNING, "3");
+		
 		
 		/* myupdate如果是空值或者大量的数据（外部存储）则直接跳过*/
 		if (isnull)
@@ -608,9 +611,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			continue;
 		
 		outputstr = OidOutputFunctionCall(typoutput, origval);
-			
 
-		elog(WARNING, "3");
 		attname = NameStr(attr->attname);
 		isFilterAtt = strcmp(attname, "id") == 0 || strcmp(attname, "tenant_id") == 0 || strcmp(attname, "ei") == 0 || strcmp(attname, "describe_id") == 0;
 		if(cmptuple == NULL && !isFilterAtt){
@@ -624,10 +625,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		if(cmptuple != NULL && !isFilterAtt){
 
 			char				*cmpgvalstr = NULL;
-			bool				iscmpnull;		
-			Datum				cmpgval;		
+			bool				iscmpnull;				
 
-			cmpgval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
 			cmpgvalstr = OidOutputFunctionCall(typoutput, cmpgval);
 			elog(WARNING, "5");
 			if(!iscmpnull && strcmp(outputstr, cmpgvalstr) == 0 )
