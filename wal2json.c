@@ -617,12 +617,12 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		if(cmptuple != NULL && !isFilterAtt){
 			Datum			cmpval;
 			bool			iscmpnull;	
-			char			*cmpvalstr = NULL;	
+// 			char			*cmpvalstr = NULL;	
 			
 			cmpval = heap_getattr(cmptuple, natt+1, tupdesc, &iscmpnull);
-
-			cmpvalstr = OidOutputFunctionCall(typoutput, cmpval);
-			if(!iscmpnull && strcmp(outputstr, cmpvalstr) == 0 )
+			elog(WARNING, "44");
+// 			cmpvalstr = OidOutputFunctionCall(typoutput, cmpval);
+			if(!iscmpnull && strcmp(outputstr, OidOutputFunctionCall(typoutput, cmpval)) == 0 )
 				continue;
 		
 						
