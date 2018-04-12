@@ -733,7 +733,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 static void
 columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, HeapTuple cmptuple, bool hasreplident)
 {
+	elog(WARNING, "111111122222222");
 	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, NULL, false, hasreplident);
+	elog(WARNING, "111111133333333");
 }
 
 /* Print replica identity information */
