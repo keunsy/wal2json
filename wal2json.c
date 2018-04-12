@@ -943,7 +943,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 // 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL , false);
 			//myupdate 加入新的索引信息 		
 // 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
-			indexRel = index_open(relation->rd_replidindex, ShareLock);
+			indexrel = index_open(relation->rd_replidindex, ShareLock);
 			
 			if (indexrel != NULL)
 			{	
@@ -989,7 +989,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				elog(DEBUG1, "old tuple is null");
 
 // 				indexrel = RelationIdGetRelation(relation->rd_replidindex);
-				indexRel = index_open(relation->rd_replidindex, ShareLock);
+				indexrel = index_open(relation->rd_replidindex, ShareLock);
 				
 				
 				if (indexrel != NULL)
@@ -1012,7 +1012,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 		case REORDER_BUFFER_CHANGE_DELETE:
 			/* Print the replica identity */
 // 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
-			indexRel = index_open(relation->rd_replidindex, ShareLock);
+			indexrel = index_open(relation->rd_replidindex, ShareLock);
 			
 			if (indexrel != NULL)
 			{
