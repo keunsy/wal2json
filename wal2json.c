@@ -470,13 +470,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 static void
 tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc, bool replident, bool hasreplident)
 {
-	
-	//如果不是修改，并且非replica identity 则跳过 （replident 用于记录主键信息）
-	if(cmptuple == NULL && !replident){
-		return;
-	}
-	
-	
+		
 	JsonDecodingData	*data;
 	int			natt;
 
@@ -486,7 +480,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	StringInfoData		colnotnulls;
 	StringInfoData		colvalues;
 	char			*comma = "";
-
+	
 	data = ctx->output_plugin_private;
 
 	initStringInfo(&colnames);
@@ -496,6 +490,11 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	if (data->include_not_null)
 		initStringInfo(&colnotnulls);
 	initStringInfo(&colvalues);
+	
+	//如果不是修改，并且非replica identity 则跳过 （replident 用于记录主键信息）
+	if(cmptuple == NULL && !replident){
+		return;
+	}
 
 	/*
 	 * If replident is true, it will output info about replica identity. In this
@@ -981,10 +980,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			/* Print the new tuple */
 			if (change->data.tp.oldtuple == NULL)
 			{
+				elog(WARNING, "00000000000000");
  				columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL, true);//myupdate 控制不输出一般信息
 			}
 			else
 			{
+				elog(WARNING, "111111111111111");
 				columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, &change->data.tp.oldtuple->tuple, true);//myupdate 控制不输出一般信息
 			}
 			/*
@@ -1005,17 +1006,20 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				
 				if (indexrel != NULL)
 				{
+					elog(WARNING, "2222222222222222");
 					indexdesc = RelationGetDescr(indexrel);
 					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
 					RelationClose(indexrel);
 				}
 				else
 				{
+					elog(WARNING, "33333333333333333");
 					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
 				}
 			}
 			else
 			{
+				elog(WARNING, "44444444444444");
 				elog(DEBUG1, "old tuple is not null");
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple,&change->data.tp.newtuple->tuple, NULL);
 			}
