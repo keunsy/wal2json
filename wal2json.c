@@ -927,30 +927,14 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	}
 
 	/* Print table name (possibly) qualified */
-	if (data->pretty_print)
-	{
-		if (data->include_schemas)
-		{
-			appendStringInfoString(ctx->out, "\t\t\t\"schema\": ");
-			escape_json(ctx->out, get_namespace_name(class_form->relnamespace));
-			appendStringInfoString(ctx->out, ",\n");
-		}
-		appendStringInfoString(ctx->out, "\t\t\t\"table\": ");
-		escape_json(ctx->out, NameStr(class_form->relname));
-		appendStringInfoString(ctx->out, ",\n");
-	}
-	else
-	{
-		if (data->include_schemas)
-		{
-			appendStringInfoString(ctx->out, "\"schema\":");
-			escape_json(ctx->out, get_namespace_name(class_form->relnamespace));
-			appendStringInfoCharMacro(ctx->out, ',');
-		}
-		appendStringInfoString(ctx->out, "\"table\":");
-		escape_json(ctx->out, NameStr(class_form->relname));
-		appendStringInfoCharMacro(ctx->out, ',');
-	}
+     	if (data->include_schemas) {
+        	appendStringInfoString(ctx->out, "\"schema\":");
+         	escape_json(ctx->out, get_namespace_name(class_form->relnamespace));
+        	appendStringInfoCharMacro(ctx->out, ',');
+     	}
+    	appendStringInfoString(ctx->out, "\"table\":");
+   	escape_json(ctx->out, NameStr(class_form->relname));
+   	appendStringInfoCharMacro(ctx->out, ',');
 
 	switch (change->action)
 	{
@@ -958,7 +942,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			/* Print the new tuple myupdate*/
 // 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL , false);
 			//myupdate 加入新的索引信息 		
-			elog(WARNING, "rd_pkindex \"%s\"",strVal(relation));
 			elog(WARNING,"rd_replidindex \"%s\"", strVal(relation->rd_replidindex));
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
 			if (indexrel != NULL)
