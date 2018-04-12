@@ -535,6 +535,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		Datum			origval;	/* possibly toasted Datum */
 		char			*outputstr = NULL;
 		bool			isnull;		/* column is null? */
+		
+		char			*attname = NULL;
+		bool    		isFilterAtt;
 
 		/*
 		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
@@ -573,8 +576,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 #endif
 
 				if (strcmp(NameStr(attr->attname), NameStr(iattr->attname)) == 0)
-					elog(WARNING, "attr \"%s\"" ,NameStr(attr->attname));
-					elog(WARNING, "iattr \"%s\"" ,NameStr(iattr->attname));
 					found_col = true;
 			}
 			/* Print only indexed columns */
@@ -603,11 +604,13 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		
 		outputstr = OidOutputFunctionCall(typoutput, origval);
 			
-		char	*attname = NULL;
-		bool    isFilterAtt;
+
 		attname = NameStr(attr->attname);
 		isFilterAtt = strcmp(attname, "id") == 0 || strcmp(attname, "tenant_id") == 0 || strcmp(attname, "ei") == 0 || strcmp(attname, "describe_id") == 0;
-
+		if(cmptuple == NULL && !isFilterAtt){
+			continue;
+		}
+		
 		// myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤）
 		if(cmptuple != NULL && !isFilterAtt){
 
