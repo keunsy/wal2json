@@ -471,14 +471,14 @@ static void
 tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc, bool replident, bool hasreplident)
 {
 	JsonDecodingData	*data;
-	int					natt;
+	int			natt;
 
 	StringInfoData		colnames;
 	StringInfoData		coltypes;
 	StringInfoData		coltypeoids;
 	StringInfoData		colnotnulls;
 	StringInfoData		colvalues;
-	char				*comma = "";
+	char			*comma = "";
 
 	data = ctx->output_plugin_private;
 
@@ -497,65 +497,43 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	 */
 	if (replident)
 	{
-		if (data->pretty_print)
-		{
-			appendStringInfoString(&colnames, "\t\t\t\"oldkeys\": {\n");
-			appendStringInfoString(&colnames, "\t\t\t\t\"keynames\": [");
-			appendStringInfoString(&coltypes, "\t\t\t\t\"keytypes\": [");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\t\t\t\"keytypeoids\": [");
-			appendStringInfoString(&colvalues, "\t\t\t\t\"keyvalues\": [");
-		}
-		else
-		{
-			appendStringInfoString(&colnames, "\"oldkeys\":{");
-			appendStringInfoString(&colnames, "\"keynames\":[");
-			appendStringInfoString(&coltypes, "\"keytypes\":[");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\"keytypeoids\": [");
-			appendStringInfoString(&colvalues, "\"keyvalues\":[");
-		}
+
+		appendStringInfoString(&colnames, "\"oldkeys\":{");
+		appendStringInfoString(&colnames, "\"keynames\":[");
+		appendStringInfoString(&coltypes, "\"keytypes\":[");
+		if (data->include_type_oids)
+			appendStringInfoString(&coltypeoids, "\"keytypeoids\": [");
+		appendStringInfoString(&colvalues, "\"keyvalues\":[");
+
 	}
 	else
 	{
-		if (data->pretty_print)
-		{
-			appendStringInfoString(&colnames, "\t\t\t\"columnnames\": [");
-			appendStringInfoString(&coltypes, "\t\t\t\"columntypes\": [");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\t\t\t\"columntypeoids\": [");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "\t\t\t\"columnoptionals\": [");
-			appendStringInfoString(&colvalues, "\t\t\t\"columnvalues\": [");
-		}
-		else
-		{
-			appendStringInfoString(&colnames, "\"columnnames\":[");
-			appendStringInfoString(&coltypes, "\"columntypes\":[");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
-			appendStringInfoString(&colvalues, "\"columnvalues\":[");
-		}
+		appendStringInfoString(&colnames, "\"columnnames\":[");
+		appendStringInfoString(&coltypes, "\"columntypes\":[");
+		if (data->include_type_oids)
+			appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
+		if (data->include_not_null)
+			appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
+		appendStringInfoString(&colvalues, "\"columnvalues\":[");
 	}
 
 	/* Print column information (name, type, value) */
 	for (natt = 0; natt < tupdesc->natts; natt++)
 	{
 		Form_pg_attribute	attr;		/* the attribute itself */
-		Oid					typid;		/* type of current attribute */
-		HeapTuple			type_tuple;	/* information about a type */
-		Oid					typoutput;	/* output function */
-		bool				typisvarlena;
-		Datum				origval;	/* possibly toasted Datum */
-		char				*outputstr = NULL;
-		bool				isnull;		/* column is null? */
+		Oid			typid;		/* type of current attribute */
+		HeapTuple		type_tuple;	/* information about a type */
+		Oid			typoutput;	/* output function */
+		bool			typisvarlena;
+		Datum			origval;	/* possibly toasted Datum */
+		char			*outputstr = NULL;
+		bool			isnull;		/* column is null? */
 
 		/*
 		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
 		 * TupleDescAttr() in back branches. If the version supports
 		 * this macro, use it. Version 10 and later already support it.
+		 * 条件预编译处理
 		 */
 #if (PG_VERSION_NUM >= 90600 && PG_VERSION_NUM < 90605) || (PG_VERSION_NUM >= 90500 && PG_VERSION_NUM < 90509) || (PG_VERSION_NUM >= 90400 && PG_VERSION_NUM < 90414)
 		attr = tupdesc->attrs[natt];
@@ -572,7 +550,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		/* Search indexed columns in whole heap tuple  在数组中找索引字段位置*/
 		if (indexdesc != NULL)
 		{
-			int		j;
+			int	j;
 			bool	found_col = false;
 
 			for (j = 0; j < indexdesc->natts; j++)
@@ -588,15 +566,11 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 				if (strcmp(NameStr(attr->attname), NameStr(iattr->attname)) == 0)
 					found_col = true;
-
 			}
-
 			/* Print only indexed columns */
 			if (!found_col)
 				continue;
 		}
-		elog(WARNING, "0000000000000");
-		
 		
 		typid = attr->atttypid;
 
@@ -611,18 +585,15 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		/* Get Datum from tuple  myudpate*/ 
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 		
-		/* myupdate如果是空值或者大量的数据则直接跳过*/
+		/* myupdate如果是空值或者大量的数据（外部存储）则直接跳过*/
 		if (isnull)
-			continue;
-		
+			continue;	
 		if (typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval))
 			continue;
 		
 		outputstr = OidOutputFunctionCall(typoutput, origval);
 			
-		
-		elog(WARNING, "1111111111111111111");
-// 		myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤） 如果判断是否主键
+// 		myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤） 如何判断是否主键
 		if(cmptuple != NULL){
 
 			char				*cmpgvalstr = NULL;
@@ -639,157 +610,90 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 				continue;			
 		}	
 
-		//myupdate remove toast value
-
-
-		elog(WARNING, "2222222222222");
 		/* Accumulate each column info */
 		appendStringInfoString(&colnames, comma);
 		escape_json(&colnames, NameStr(attr->attname));
 
-		if (data->include_types)
-		{
-			if (data->include_typmod)
-			{
-				char	*type_str;
-
-				type_str = TextDatumGetCString(DirectFunctionCall2(format_type, attr->atttypid, attr->atttypmod));
-				appendStringInfoString(&coltypes, comma);
-				escape_json(&coltypes, type_str);
-				pfree(type_str);
-			}
-			else
-			{
-				Form_pg_type type_form = (Form_pg_type) GETSTRUCT(type_tuple);
-				appendStringInfoString(&coltypes, comma);
-				escape_json(&coltypes, NameStr(type_form->typname));
-			}
-
-			/* oldkeys doesn't print not-null constraints */
-			if (!replident && data->include_not_null)
-			{
-				if (attr->attnotnull)
-					appendStringInfo(&colnotnulls, "%sfalse", comma);
-				else
-					appendStringInfo(&colnotnulls, "%strue", comma);
-			}
-		}
-
-		if (data->include_type_oids)
-			appendStringInfo(&coltypeoids, "%s%u", comma, typid);
-
 		ReleaseSysCache(type_tuple);
 
-
-			/*
-			 * Data types are printed with quotes unless they are number, true,
-			 * false, null, an array or an object.
-			 *
-			 * The NaN and Infinity are not valid JSON symbols. Hence,
-			 * regardless of sign they are represented as the string null.
-			 */
-			switch (typid)
-			{
-				case INT2OID:
-				case INT4OID:
-				case INT8OID:
-				case OIDOID:
-				case FLOAT4OID:
-				case FLOAT8OID:
-				case NUMERICOID:
-					if (pg_strncasecmp(outputstr, "NaN", 3) == 0 ||
-							pg_strncasecmp(outputstr, "Infinity", 8) == 0 ||
-							pg_strncasecmp(outputstr, "-Infinity", 9) == 0)
-					{
-						appendStringInfo(&colvalues, "%snull", comma);
-						elog(DEBUG1, "attribute \"%s\" is special: %s", NameStr(attr->attname), outputstr);
-					}
-					else if (strspn(outputstr, "0123456789+-eE.") == strlen(outputstr))
-						appendStringInfo(&colvalues, "%s%s", comma, outputstr);
-					else
-						elog(ERROR, "%s is not a number", outputstr);
-					break;
-				case BOOLOID:
-					if (strcmp(outputstr, "t") == 0)
-						appendStringInfo(&colvalues, "%strue", comma);
-					else
-						appendStringInfo(&colvalues, "%sfalse", comma);
-					break;
-				case BYTEAOID:
-					appendStringInfoString(&colvalues, comma);
-					// XXX: strings here are "\xC0FFEE", we strip the "\x"
-					escape_json(&colvalues, (outputstr+2));
-					break;
-				default:
-					appendStringInfoString(&colvalues, comma);
-					escape_json(&colvalues, outputstr);
-					break;
-			}
+		/*
+		 * Data types are printed with quotes unless they are number, true,
+		 * false, null, an array or an object.
+		 *
+		 * The NaN and Infinity are not valid JSON symbols. Hence,
+		 * regardless of sign they are represented as the string null.
+		 */
+		switch (typid)
+		{
+			case INT2OID:
+			case INT4OID:
+			case INT8OID:
+			case OIDOID:
+			case FLOAT4OID:
+			case FLOAT8OID:
+			case NUMERICOID:
+				if (pg_strncasecmp(outputstr, "NaN", 3) == 0 ||
+						pg_strncasecmp(outputstr, "Infinity", 8) == 0 ||
+						pg_strncasecmp(outputstr, "-Infinity", 9) == 0)
+				{
+					appendStringInfo(&colvalues, "%snull", comma);
+					elog(DEBUG1, "attribute \"%s\" is special: %s", NameStr(attr->attname), outputstr);
+				}
+				else if (strspn(outputstr, "0123456789+-eE.") == strlen(outputstr))
+					appendStringInfo(&colvalues, "%s%s", comma, outputstr);
+				else
+					elog(ERROR, "%s is not a number", outputstr);
+				break;
+			case BOOLOID:
+				if (strcmp(outputstr, "t") == 0)
+					appendStringInfo(&colvalues, "%strue", comma);
+				else
+					appendStringInfo(&colvalues, "%sfalse", comma);
+				break;
+			case BYTEAOID:
+				appendStringInfoString(&colvalues, comma);
+				// XXX: strings here are "\xC0FFEE", we strip the "\x"
+				escape_json(&colvalues, (outputstr+2));
+				break;
+			default:
+				appendStringInfoString(&colvalues, comma);
+				escape_json(&colvalues, outputstr);
+				break;
+		}
 
 		/* The first column does not have comma */
 		if (strcmp(comma, "") == 0)
 		{
-			if (data->pretty_print)
-				comma = ", ";
-			else
-				comma = ",";
+			comma = ",";
 		}
 	}
 
 	/* Column info ends */
 	if (replident)
 	{
-		if (data->pretty_print)
-		{
-			appendStringInfoString(&colnames, "],\n");
-			if (data->include_types)
-				appendStringInfoString(&coltypes, "],\n");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "],\n");
-			appendStringInfoString(&colvalues, "]\n");
-			appendStringInfoString(&colvalues, "\t\t\t}\n");
-		}
-		else
-		{
-			appendStringInfoString(&colnames, "],");
-			if (data->include_types)
-				appendStringInfoString(&coltypes, "],");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "],");
-			appendStringInfoCharMacro(&colvalues, ']');
-			appendStringInfoCharMacro(&colvalues, '}');
-		}
+		appendStringInfoString(&colnames, "],");
+		if (data->include_types)
+			appendStringInfoString(&coltypes, "],");
+		if (data->include_type_oids)
+			appendStringInfoString(&coltypeoids, "],");
+		appendStringInfoCharMacro(&colvalues, ']');
+		appendStringInfoCharMacro(&colvalues, '}');
+
 	}
 	else
 	{
-		if (data->pretty_print)
-		{
-			appendStringInfoString(&colnames, "],\n");
-			if (data->include_types)
-				appendStringInfoString(&coltypes, "],\n");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "],\n");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "],\n");
-			if (hasreplident)
-				appendStringInfoString(&colvalues, "],\n");
-			else
-				appendStringInfoString(&colvalues, "]\n");
-		}
+
+		appendStringInfoString(&colnames, "],");
+		if (data->include_types)
+			appendStringInfoString(&coltypes, "],");
+		if (data->include_type_oids)
+			appendStringInfoString(&coltypeoids, "],");
+		if (data->include_not_null)
+			appendStringInfoString(&colnotnulls, "],");
+		if (hasreplident)
+			appendStringInfoString(&colvalues, "],");
 		else
-		{
-			appendStringInfoString(&colnames, "],");
-			if (data->include_types)
-				appendStringInfoString(&coltypes, "],");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "],");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "],");
-			if (hasreplident)
-				appendStringInfoString(&colvalues, "],");
-			else
-				appendStringInfoCharMacro(&colvalues, ']');
-		}
+			appendStringInfoCharMacro(&colvalues, ']');
 	}
 
 	/* Print data */
@@ -802,8 +706,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		appendStringInfoString(ctx->out, colnotnulls.data);
 	appendStringInfoString(ctx->out, colvalues.data);
 
-	
-		elog(WARNING, "33333333333333333333");
 	
 	pfree(colnames.data);
 	pfree(coltypes.data);
