@@ -619,7 +619,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			bool			iscmpnull;	
 			char			*cmpvalstr = NULL;	
 			
-			cmpval = heap_getattr(cmptuple, natt, tupdesc, &iscmpnull);
+			cmpval = heap_getattr(cmptuple, natt+1, tupdesc, &iscmpnull);
 
 			cmpvalstr = OidOutputFunctionCall(typoutput, cmpval);
 			if(!iscmpnull && strcmp(outputstr, cmpvalstr) == 0 )
