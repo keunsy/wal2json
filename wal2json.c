@@ -942,7 +942,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			/* Print the new tuple myupdate*/
 // 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL , false);
 			//myupdate 加入新的索引信息 		
-			elog(WARNING,"rd_replidindex \"%s\"", strVal(relation->rd_replidindex));
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
 			if (indexrel != NULL)
 			{	
