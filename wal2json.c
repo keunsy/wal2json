@@ -617,7 +617,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			continue;
 		}
 		
-		elog(WARNING, attname);
+		elog(WARNING, strVal(attname));
 		
 		elog(WARNING, "4");
 		// myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤）
