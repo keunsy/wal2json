@@ -538,7 +538,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		
 		char			*attname = NULL;
 		bool    		isFilterAtt;
-		Datum			cmpgval;
+		Datum			cmpval;
+		bool			iscmpnull;	
 
 		/*
 		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
@@ -599,7 +600,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		//必须跟紧取值，否则continue过多会报错
 		elog(WARNING, "2");
 		if(cmptuple != NULL){ 
-			cmpgval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
+			cmpval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
 		}
 		elog(WARNING, "3");
 		
@@ -624,12 +625,11 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		// myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤）
 		if(cmptuple != NULL && !isFilterAtt){
 
-			char				*cmpgvalstr = NULL;
-			bool				iscmpnull;				
+			char				*cmpvalstr = NULL;	
 
-			cmpgvalstr = OidOutputFunctionCall(typoutput, cmpgval);
+			cmpvalstr = OidOutputFunctionCall(typoutput, cmpval);
 			elog(WARNING, "5");
-			if(!iscmpnull && strcmp(outputstr, cmpgvalstr) == 0 )
+			if(!iscmpnull && strcmp(outputstr, cmpvalstr) == 0 )
 				continue;			
 		}	
 
