@@ -470,6 +470,13 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 static void
 tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc, bool replident, bool hasreplident)
 {
+	
+	//如果不是修改，并且非replica identity 则跳过 （replident 用于记录主键信息）
+	if(cmptuple == NULL && !replident){
+		retrun;
+	}
+	
+	
 	JsonDecodingData	*data;
 	int			natt;
 
@@ -547,6 +554,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		if (attr->attisdropped || attr->attnum < 0)
 			continue;
 
+		
 		/* Search indexed columns in whole heap tuple  在数组中找索引字段位置*/
 		if (indexdesc != NULL)
 		{
@@ -595,8 +603,13 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		
 		outputstr = OidOutputFunctionCall(typoutput, origval);
 			
-// 		myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤） 如何判断是否主键
-		if(cmptuple != NULL){
+		char	*attname = NULL;
+		bool    isFilterAtt;
+		attname = NameStr(attr->attname);
+		isFilterAtt = strcmp(attname, 'id') == 0 || strcmp(attname, 'tenant_id') == 0 || strcmp(attname, 'ei') == 0 || strcmp(attname, 'describe_id') == 0;
+
+		// myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤）
+		if(cmptuple != NULL && !replident && !isFilterAtt){
 
 			char				*cmpgvalstr = NULL;
 			bool				iscmpnull;		
@@ -942,19 +955,16 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			/* Print the new tuple myupdate*/
 // 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL , false);
 			//myupdate 加入新的索引信息 		
-// 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
-			indexrel = index_open(relation->rd_replidindex, ShareLock);
-			
+			indexrel = RelationIdGetRelation(relation->rd_replidindex);
+		
 			if (indexrel != NULL)
 			{	
-				elog(WARNING, "00000000000");
 				indexdesc = RelationGetDescr(indexrel);
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				elog(WARNING, "11111111");
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
 			}
 
@@ -988,9 +998,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				
 				elog(DEBUG1, "old tuple is null");
 
-// 				indexrel = RelationIdGetRelation(relation->rd_replidindex);
-				indexrel = index_open(relation->rd_replidindex, ShareLock);
-				
+				indexrel = RelationIdGetRelation(relation->rd_replidindex);
 				
 				if (indexrel != NULL)
 				{
@@ -1011,19 +1019,16 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			break;
 		case REORDER_BUFFER_CHANGE_DELETE:
 			/* Print the replica identity */
-// 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
-			indexrel = index_open(relation->rd_replidindex, ShareLock);
-			
+			indexrel = RelationIdGetRelation(relation->rd_replidindex);
+		
 			if (indexrel != NULL)
 			{
-				elog(WARNING, "00000000000");
 				indexdesc = RelationGetDescr(indexrel);
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, indexdesc);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				elog(WARNING, "1111111111111");
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, NULL);
 			}
 
