@@ -481,6 +481,13 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	StringInfoData		colvalues;
 	char			*comma = "";
 	
+	
+	//如果不是修改，并且非replica identity 则跳过 （replident 用于记录主键信息）
+	if(cmptuple == NULL && !replident){
+		return;
+	}
+	elog(WARNING, "0");
+	
 	data = ctx->output_plugin_private;
 
 	initStringInfo(&colnames);
@@ -491,10 +498,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		initStringInfo(&colnotnulls);
 	initStringInfo(&colvalues);
 	
-	//如果不是修改，并且非replica identity 则跳过 （replident 用于记录主键信息）
-	if(cmptuple == NULL && !replident){
-		return;
-	}
+	elog(WARNING, "1");
+
 
 	/*
 	 * If replident is true, it will output info about replica identity. In this
@@ -523,6 +528,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		appendStringInfoString(&colvalues, "\"columnvalues\":[");
 	}
 
+	elog(WARNING, "2");
 	/* Print column information (name, type, value) */
 	for (natt = 0; natt < tupdesc->natts; natt++)
 	{
@@ -604,12 +610,16 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		outputstr = OidOutputFunctionCall(typoutput, origval);
 			
 
+		elog(WARNING, "3");
 		attname = NameStr(attr->attname);
 		isFilterAtt = strcmp(attname, "id") == 0 || strcmp(attname, "tenant_id") == 0 || strcmp(attname, "ei") == 0 || strcmp(attname, "describe_id") == 0;
 		if(cmptuple == NULL && !isFilterAtt){
 			continue;
 		}
 		
+		elog(WARNING, attname);
+		
+		elog(WARNING, "4");
 		// myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤）
 		if(cmptuple != NULL && !isFilterAtt){
 
@@ -619,16 +629,19 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 			cmpgval = heap_getattr(cmptuple, natt + 1, tupdesc, &iscmpnull);
 			cmpgvalstr = OidOutputFunctionCall(typoutput, cmpgval);
+			elog(WARNING, "5");
 			if(!iscmpnull && strcmp(outputstr, cmpgvalstr) == 0 )
 				continue;			
 		}	
 
+		elog(WARNING, "6");
 		/* Accumulate each column info */
 		appendStringInfoString(&colnames, comma);
 		escape_json(&colnames, NameStr(attr->attname));
 
 		ReleaseSysCache(type_tuple);
 
+		elog(WARNING, "7");
 		/*
 		 * Data types are printed with quotes unless they are number, true,
 		 * false, null, an array or an object.
@@ -733,9 +746,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 static void
 columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, HeapTuple cmptuple, bool hasreplident)
 {
-	elog(WARNING, "111111122222222");
 	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, NULL, false, hasreplident);
-	elog(WARNING, "111111133333333");
 }
 
 /* Print replica identity information */
@@ -982,12 +993,11 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			/* Print the new tuple */
 			if (change->data.tp.oldtuple == NULL)
 			{
-				elog(WARNING, "00000000000000");
  				columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL, true);//myupdate 控制不输出一般信息
 			}
 			else
 			{
-				elog(WARNING, "111111111111111");
+
 				columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, &change->data.tp.oldtuple->tuple, true);//myupdate 控制不输出一般信息
 			}
 			/*
@@ -1008,20 +1018,17 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				
 				if (indexrel != NULL)
 				{
-					elog(WARNING, "2222222222222222");
 					indexdesc = RelationGetDescr(indexrel);
 					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
 					RelationClose(indexrel);
 				}
 				else
 				{
-					elog(WARNING, "33333333333333333");
 					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
 				}
 			}
 			else
 			{
-				elog(WARNING, "44444444444444");
 				elog(DEBUG1, "old tuple is not null");
 				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple,&change->data.tp.newtuple->tuple, NULL);
 			}
