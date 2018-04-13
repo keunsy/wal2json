@@ -755,6 +755,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 	char		*schemaname;
 	char		*tablename;
+	
+	elog(WARNING,"change type \"%s\"", change->action);
+	
 
 	AssertVariableIsOfType(&pg_decode_change, LogicalDecodeChangeCB);
 
