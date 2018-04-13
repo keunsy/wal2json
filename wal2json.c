@@ -756,7 +756,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	char		*schemaname;
 	char		*tablename;
 	
-	elog(WARNING,"change type \"%s\"", change->action);
+	elog(WARNING,"111111");
+	elog(WARNING,"change type \"%d\"", change->action);
 	
 
 	AssertVariableIsOfType(&pg_decode_change, LogicalDecodeChangeCB);
@@ -894,26 +895,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	data->nr_changes++;
 
 	/* Change starts */
-	if (data->pretty_print)
-	{
-		/* if we don't write in chunks, we need a newline here */
-		if (!data->write_in_chunks)
-			appendStringInfoChar(ctx->out, '\n');
 
-		appendStringInfoString(ctx->out, "\t\t");
-
-		if (data->nr_changes > 1)
-			appendStringInfoChar(ctx->out, ',');
-
-		appendStringInfoString(ctx->out, "{\n");
-	}
+	if (data->nr_changes > 1)
+		appendStringInfoString(ctx->out, ",{");
 	else
-	{
-		if (data->nr_changes > 1)
-			appendStringInfoString(ctx->out, ",{");
-		else
-			appendStringInfoCharMacro(ctx->out, '{');
-	}
+		appendStringInfoCharMacro(ctx->out, '{');
+
 
 	/* Print change kind */
 	switch (change->action)
