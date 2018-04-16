@@ -595,9 +595,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			cmpval = heap_getattr(cmptuple, natt+1, tupdesc, &iscmpnull);
 			if(!iscmpnull && strcmp(outputstr, OidOutputFunctionCall(typoutput, cmpval)) == 0 ){
 				continue;	
-			}else{
+			}else if(!iscmpnull){
 				
-				strcat(outputstr,strcat("ctrla",cmpval));
+				strcat(outputstr,strcat("ctrla",OidOutputFunctionCall(typoutput, cmpval)));
 			}
 		}	
 
