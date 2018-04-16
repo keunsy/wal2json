@@ -581,6 +581,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	}
 
 	/* Print column information (name, type, value) */
+	
+	elog(WARNING,"natts \"%d\"",tupdesc->natts);
 	for (natt = 0; natt < tupdesc->natts; natt++)
 	{
 		Form_pg_attribute	attr;		/* the attribute itself */
@@ -748,7 +750,7 @@ static void
 identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc)
 {
 	/* Last parameter does not matter */
-	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, indexdesc, true, false);
+	tuple_to_stringinfo(ctx, indexdesc, tuple, cmptuple, NULL, true, false);
 }
 
 /* Callback for individual changed tuples ，change内容操作起始点*/
