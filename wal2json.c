@@ -468,7 +468,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
  * 用于change内容数据的拼接，将数组内容转化为相应的格式
  */
 static void
-tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc, bool replident, bool hasreplident)
+tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, bool replident, bool hasreplident)
 {
 		
 	JsonDecodingData	*data;
@@ -556,32 +556,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		/* Do not print dropped or system columns */
 		if (attr->attisdropped || attr->attnum < 0)
 			continue;
-
-		
-		/* Search indexed columns in whole heap tuple  在数组中找索引字段位置*/
-		if (indexdesc != NULL)
-		{
-			int	j;
-			bool	found_col = false;
-
-			for (j = 0; j < indexdesc->natts; j++)
-			{
-				Form_pg_attribute	iattr;
-
-				/* See explanation a few lines above. */
-#if (PG_VERSION_NUM >= 90600 && PG_VERSION_NUM < 90605) || (PG_VERSION_NUM >= 90500 && PG_VERSION_NUM < 90509) || (PG_VERSION_NUM >= 90400 && PG_VERSION_NUM < 90414)
-				iattr = indexdesc->attrs[j];
-#else
-				iattr = TupleDescAttr(indexdesc, j);
-#endif
-
-				if (strcmp(NameStr(attr->attname), NameStr(iattr->attname)) == 0)
-					found_col = true;
-			}
-			/* Print only indexed columns */
-			if (!found_col)
-				continue;
-		}
 		
 		typid = attr->atttypid;
 
@@ -729,15 +703,15 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 static void
 columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, HeapTuple cmptuple, bool hasreplident)
 {
-	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, NULL, false, hasreplident);
+	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, false, hasreplident);
 }
 
 /* Print replica identity information */
 static void
-identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc)
+identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple)
 {
 	/* Last parameter does not matter */
-	tuple_to_stringinfo(ctx, indexdesc, tuple, cmptuple, NULL, true, false);
+	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, true, false);
 }
 
 /* Callback for individual changed tuples ，change内容操作起始点*/
@@ -945,12 +919,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			if (indexrel != NULL)
 			{	
 				indexdesc = RelationGetDescr(indexrel);
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
+				identity_to_stringinfo(ctx, indexdesc, &change->data.tp.newtuple->tuple,NULL);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL);
 			}
 
 			if (change->data.tp.newtuple == NULL)
@@ -989,18 +963,18 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				if (indexrel != NULL)
 				{
 					indexdesc = RelationGetDescr(indexrel);
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
+					identity_to_stringinfo(ctx, indexdesc, &change->data.tp.newtuple->tuple,NULL);
 					RelationClose(indexrel);
 				}
 				else
 				{
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
+					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL);
 				}
 			}
 			else
 			{
 				elog(DEBUG1, "old tuple is not null");
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple,&change->data.tp.newtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple,&change->data.tp.newtuple->tuple);
 			}
 			break;
 		case REORDER_BUFFER_CHANGE_DELETE:
@@ -1010,12 +984,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			if (indexrel != NULL)
 			{
 				indexdesc = RelationGetDescr(indexrel);
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, indexdesc);
+				identity_to_stringinfo(ctx, indexdesc, &change->data.tp.oldtuple->tuple, NULL);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
 			}
 
 			if (change->data.tp.oldtuple == NULL)
