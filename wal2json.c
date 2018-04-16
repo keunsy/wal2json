@@ -737,7 +737,7 @@ static void
 identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc)
 {
 	/* Last parameter does not matter */
-	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, indexdesc, true, false);
+	tuple_to_stringinfo(ctx, indexdesc, tuple, cmptuple, NULL, true, false);
 }
 
 /* Callback for individual changed tuples ，change内容操作起始点*/
