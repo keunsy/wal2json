@@ -625,7 +625,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		ReleaseSysCache(type_tuple);
 		
-		convert_values(typid,outputstr,colvalues,comma);
+		append_convert_values(typid,outputstr,colvalues,comma);
 
 	}
 
@@ -680,7 +680,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 
 static void
-convert_values(Oid typid, char *outputstr, StringInfoData colvalues,char *comma)
+append_convert_values(Oid typid, char *outputstr, StringInfoData colvalues,char *comma)
 {
 		/*
 		 * Data types are printed with quotes unless they are number, true,
