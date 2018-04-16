@@ -680,7 +680,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 
 static void
-convert_values(Oid typid, char *outputstr, StringInfoData colvalues,char comma)
+convert_values(Oid typid, char *outputstr, StringInfoData colvalues,char *comma)
 {
 		/*
 		 * Data types are printed with quotes unless they are number, true,
