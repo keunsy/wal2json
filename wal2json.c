@@ -464,6 +464,10 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 static void
 append_convert_values(Oid typid, char *outputstr, StringInfoData colvalues,Form_pg_attribute attr,char *comma)
 {
+	
+	elog(DEBUG1, "\"%s\"",outputstr );
+	elog(DEBUG1, "\"%s\"",comma );
+
 		/*
 		 * Data types are printed with quotes unless they are number, true,
 		 * false, null, an array or an object.
@@ -684,7 +688,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		ReleaseSysCache(type_tuple);
 		
-		append_convert_values(typid,*outputstr,colvalues,attr,*comma);
+		append_convert_values(typid,outputstr,colvalues,attr,comma);
 
 	}
 
