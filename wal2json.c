@@ -24,8 +24,6 @@
 #include "utils/rel.h"
 #include "utils/syscache.h"
 
-#include "hashmap.h"
-
 PG_MODULE_MAGIC;
 
 extern void		_PG_init(void);
