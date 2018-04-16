@@ -660,11 +660,13 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		
 		/* myupdate如果是空值或者大量的数据（外部存储）则直接跳过*/
 		if (isnull)
+			elog("fesfefsfefe  \"%s\"",NameStr(attr->attname));
 			continue;	
 		if (typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval))
 			continue;
 		
 		outputstr = OidOutputFunctionCall(typoutput, origval);
+		
 
 		attname = NameStr(attr->attname);
 		isFilterAtt = strcmp(attname, "id") == 0 || strcmp(attname, "tenant_id") == 0 || strcmp(attname, "ei") == 0 || strcmp(attname, "describe_id") == 0;
