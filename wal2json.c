@@ -684,7 +684,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		ReleaseSysCache(type_tuple);
 		
-		append_convert_values(typid,outputstr,colvalues,attr,comma);
+		append_convert_values(typid,*outputstr,colvalues,attr,*comma);
 
 	}
 
