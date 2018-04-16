@@ -481,6 +481,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	StringInfoData		colvalues;
 	char			*comma = "";
 	
+	if(replident){
+		return;
+	}
 	
 	//如果不是修改，并且非replica identity 则跳过 （replident 用于记录主键信息）
 	if(cmptuple == NULL && !replident){
@@ -590,8 +593,12 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 			bool			iscmpnull;	
 			
 			cmpval = heap_getattr(cmptuple, natt+1, tupdesc, &iscmpnull);
-			if(!iscmpnull && strcmp(outputstr, OidOutputFunctionCall(typoutput, cmpval)) == 0 )
-				continue;			
+			if(!iscmpnull && strcmp(outputstr, OidOutputFunctionCall(typoutput, cmpval)) == 0 ){
+				continue;	
+			}else{
+				
+				strcat(outputstr,strcat("ctrla",cmpval));
+			}
 		}	
 
 		/* Accumulate each column info */
