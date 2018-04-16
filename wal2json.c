@@ -460,6 +460,63 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 }
 
 
+
+static void
+append_convert_values(Oid typid, char *outputstr, StringInfoData colvalues,Form_pg_attribute attr,char *comma)
+{
+		/*
+		 * Data types are printed with quotes unless they are number, true,
+		 * false, null, an array or an object.
+		 *
+		 * The NaN and Infinity are not valid JSON symbols. Hence,
+		 * regardless of sign they are represented as the string null.
+		 */
+		switch (typid)
+		{
+			case INT2OID:
+			case INT4OID:
+			case INT8OID:
+			case OIDOID:
+			case FLOAT4OID:
+			case FLOAT8OID:
+			case NUMERICOID:
+				if (pg_strncasecmp(outputstr, "NaN", 3) == 0 ||
+						pg_strncasecmp(outputstr, "Infinity", 8) == 0 ||
+						pg_strncasecmp(outputstr, "-Infinity", 9) == 0)
+				{
+					appendStringInfo(&colvalues, "%snull", comma);
+					elog(DEBUG1, "attribute \"%s\" is special: %s", NameStr(attr->attname), outputstr);
+				}
+				else if (strspn(outputstr, "0123456789+-eE.") == strlen(outputstr))
+					appendStringInfo(&colvalues, "%s%s", comma, outputstr);
+				else
+					elog(ERROR, "%s is not a number", outputstr);
+				break;
+			case BOOLOID:
+				if (strcmp(outputstr, "t") == 0)
+					appendStringInfo(&colvalues, "%strue", comma);
+				else
+					appendStringInfo(&colvalues, "%sfalse", comma);
+				break;
+			case BYTEAOID:
+				appendStringInfoString(&colvalues, comma);
+				// XXX: strings here are "\xC0FFEE", we strip the "\x"
+				escape_json(&colvalues, (outputstr+2));
+				break;
+			default:
+				appendStringInfoString(&colvalues, comma);
+				escape_json(&colvalues, outputstr);
+				break;
+		}
+
+		/* The first column does not have comma */
+		if (strcmp(comma, "") == 0)
+		{
+			comma = ",";
+		}
+}
+
+
 /*
  * Accumulate tuple information and stores it at the end
  *
@@ -677,62 +734,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	pfree(colvalues.data);
 }
 
-
-
-static void
-append_convert_values(Oid typid, char *outputstr, StringInfoData colvalues,Form_pg_attribute attr,char *comma)
-{
-		/*
-		 * Data types are printed with quotes unless they are number, true,
-		 * false, null, an array or an object.
-		 *
-		 * The NaN and Infinity are not valid JSON symbols. Hence,
-		 * regardless of sign they are represented as the string null.
-		 */
-		switch (typid)
-		{
-			case INT2OID:
-			case INT4OID:
-			case INT8OID:
-			case OIDOID:
-			case FLOAT4OID:
-			case FLOAT8OID:
-			case NUMERICOID:
-				if (pg_strncasecmp(outputstr, "NaN", 3) == 0 ||
-						pg_strncasecmp(outputstr, "Infinity", 8) == 0 ||
-						pg_strncasecmp(outputstr, "-Infinity", 9) == 0)
-				{
-					appendStringInfo(&colvalues, "%snull", comma);
-					elog(DEBUG1, "attribute \"%s\" is special: %s", NameStr(attr->attname), outputstr);
-				}
-				else if (strspn(outputstr, "0123456789+-eE.") == strlen(outputstr))
-					appendStringInfo(&colvalues, "%s%s", comma, outputstr);
-				else
-					elog(ERROR, "%s is not a number", outputstr);
-				break;
-			case BOOLOID:
-				if (strcmp(outputstr, "t") == 0)
-					appendStringInfo(&colvalues, "%strue", comma);
-				else
-					appendStringInfo(&colvalues, "%sfalse", comma);
-				break;
-			case BYTEAOID:
-				appendStringInfoString(&colvalues, comma);
-				// XXX: strings here are "\xC0FFEE", we strip the "\x"
-				escape_json(&colvalues, (outputstr+2));
-				break;
-			default:
-				appendStringInfoString(&colvalues, comma);
-				escape_json(&colvalues, outputstr);
-				break;
-		}
-
-		/* The first column does not have comma */
-		if (strcmp(comma, "") == 0)
-		{
-			comma = ",";
-		}
-}
 
 
 /* Print columns information */
