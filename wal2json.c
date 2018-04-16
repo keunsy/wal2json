@@ -482,6 +482,11 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	char			*comma = "";
 	
 	
+	if(replident && indexdesc == NULL){
+		return;
+	}
+	
+	
 	//如果不是修改，并且非replica identity 则跳过 （replident 用于记录主键信息）
 	if(cmptuple == NULL && !replident){
 		return;
