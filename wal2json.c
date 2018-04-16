@@ -479,13 +479,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	StringInfoData		coltypeoids;
 	StringInfoData		colnotnulls;
 	StringInfoData		colvalues;
-	char			*comma = "";
-	
-	
-	if(replident && indexdesc == NULL){
-		return;
-	}
-	
+	char			*comma = "";	
 	
 	//如果不是修改，并且非replica identity 则跳过 （replident 用于记录主键信息）
 	if(cmptuple == NULL && !replident){
@@ -630,6 +624,64 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		escape_json(&colnames, NameStr(attr->attname));
 
 		ReleaseSysCache(type_tuple);
+		
+		convert_values(typid,outputstr,colvalues,comma);
+
+	}
+
+	/* Column info ends */
+	if (replident)
+	{
+		appendStringInfoString(&colnames, "],");
+		if (data->include_types)
+			appendStringInfoString(&coltypes, "],");
+		if (data->include_type_oids)
+			appendStringInfoString(&coltypeoids, "],");
+		appendStringInfoCharMacro(&colvalues, ']');
+		appendStringInfoCharMacro(&colvalues, '}');
+
+	}
+	else
+	{
+
+		appendStringInfoString(&colnames, "],");
+		if (data->include_types)
+			appendStringInfoString(&coltypes, "],");
+		if (data->include_type_oids)
+			appendStringInfoString(&coltypeoids, "],");
+		if (data->include_not_null)
+			appendStringInfoString(&colnotnulls, "],");
+		if (hasreplident)
+			appendStringInfoString(&colvalues, "],");
+		else
+			appendStringInfoCharMacro(&colvalues, ']');
+	}
+
+	/* Print data */
+	appendStringInfoString(ctx->out, colnames.data);
+	if (data->include_types)
+		appendStringInfoString(ctx->out, coltypes.data);
+	if (data->include_type_oids)
+		appendStringInfoString(ctx->out, coltypeoids.data);
+	if (data->include_not_null)
+		appendStringInfoString(ctx->out, colnotnulls.data);
+	appendStringInfoString(ctx->out, colvalues.data);
+
+	
+	pfree(colnames.data);
+	pfree(coltypes.data);
+	if (data->include_type_oids)
+		pfree(coltypeoids.data);
+	if (data->include_not_null)
+		pfree(colnotnulls.data);
+	pfree(colvalues.data);
+}
+
+
+
+static void
+convert_values(Oid typid, char *outputstr, StringInfoData colvalues,char comma)
+{
 		/*
 		 * Data types are printed with quotes unless they are number, true,
 		 * false, null, an array or an object.
@@ -680,55 +732,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		{
 			comma = ",";
 		}
-	}
-
-	/* Column info ends */
-	if (replident)
-	{
-		appendStringInfoString(&colnames, "],");
-		if (data->include_types)
-			appendStringInfoString(&coltypes, "],");
-		if (data->include_type_oids)
-			appendStringInfoString(&coltypeoids, "],");
-		appendStringInfoCharMacro(&colvalues, ']');
-		appendStringInfoCharMacro(&colvalues, '}');
-
-	}
-	else
-	{
-
-		appendStringInfoString(&colnames, "],");
-		if (data->include_types)
-			appendStringInfoString(&coltypes, "],");
-		if (data->include_type_oids)
-			appendStringInfoString(&coltypeoids, "],");
-		if (data->include_not_null)
-			appendStringInfoString(&colnotnulls, "],");
-		if (hasreplident)
-			appendStringInfoString(&colvalues, "],");
-		else
-			appendStringInfoCharMacro(&colvalues, ']');
-	}
-
-	/* Print data */
-	appendStringInfoString(ctx->out, colnames.data);
-	if (data->include_types)
-		appendStringInfoString(ctx->out, coltypes.data);
-	if (data->include_type_oids)
-		appendStringInfoString(ctx->out, coltypeoids.data);
-	if (data->include_not_null)
-		appendStringInfoString(ctx->out, colnotnulls.data);
-	appendStringInfoString(ctx->out, colvalues.data);
-
-	
-	pfree(colnames.data);
-	pfree(coltypes.data);
-	if (data->include_type_oids)
-		pfree(coltypeoids.data);
-	if (data->include_not_null)
-		pfree(colnotnulls.data);
-	pfree(colvalues.data);
 }
+
 
 /* Print columns information */
 static void
