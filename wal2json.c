@@ -468,7 +468,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
  * 用于change内容数据的拼接，将数组内容转化为相应的格式
  */
 static void
-tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc, bool replident, bool hasreplident)
+tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple , bool replident, bool hasreplident)
 {
 	JsonDecodingData	*data;
 	int					natt;
@@ -554,7 +554,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		bool				isnull;		/* column is null? */
 
 		/*
-		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
 		 * TupleDescAttr() in back branches. If the version supports
 		 * this macro, use it. Version 10 and later already support it.
 		 */
@@ -566,36 +565,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		elog(DEBUG1, "attribute \"%s\" (%d/%d)", NameStr(attr->attname), natt, tupdesc->natts);
 
-		/* Do not print dropped or system columns  ？？？？考虑是否在此处进行字段过滤*/
+		/* Do not print dropped or system columns*/
 		if (attr->attisdropped || attr->attnum < 0)
 			continue;
-
-		/* Search indexed columns in whole heap tuple  在数组中找索引字段位置*/
-		if (indexdesc != NULL)
-		{
-			int		j;
-			bool	found_col = false;
-
-			for (j = 0; j < indexdesc->natts; j++)
-			{
-				Form_pg_attribute	iattr;
-
-				/* See explanation a few lines above. */
-#if (PG_VERSION_NUM >= 90600 && PG_VERSION_NUM < 90605) || (PG_VERSION_NUM >= 90500 && PG_VERSION_NUM < 90509) || (PG_VERSION_NUM >= 90400 && PG_VERSION_NUM < 90414)
-				iattr = indexdesc->attrs[j];
-#else
-				iattr = TupleDescAttr(indexdesc, j);
-#endif
-
-				if (strcmp(NameStr(attr->attname), NameStr(iattr->attname)) == 0)
-					found_col = true;
-
-			}
-
-			/* Print only indexed columns */
-			if (!found_col)
-				continue;
-		}
 
 		typid = attr->atttypid;
 
@@ -807,15 +779,15 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 static void
 columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, bool hasreplident)
 {
-	tuple_to_stringinfo(ctx, tupdesc, tuple, NULL, false, hasreplident);
+	tuple_to_stringinfo(ctx, tupdesc, tuple, false, hasreplident);
 }
 
 /* Print replica identity information */
 static void
-identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc)
+identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc indexdesc, HeapTuple tuple)
 {
 	/* Last parameter does not matter */
-	tuple_to_stringinfo(ctx, tupdesc, tuple, indexdesc, true, false);
+	tuple_to_stringinfo(ctx, indexdesc, tuple, true, false);
 }
 
 /* Callback for individual changed tuples ，change内容操作起始点*/
@@ -1051,12 +1023,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			if (indexrel != NULL)
 			{
 				indexdesc = RelationGetDescr(indexrel);
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, indexdesc);
+				identity_to_stringinfo(ctx, indexdesc, &change->data.tp.newtuple->tuple);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple);
 			}
 
 			if (change->data.tp.newtuple == NULL)
@@ -1086,18 +1058,18 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				if (indexrel != NULL)
 				{
 					indexdesc = RelationGetDescr(indexrel);
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, indexdesc);
+					identity_to_stringinfo(ctx, indexdesc, &change->data.tp.newtuple->tuple);
 					RelationClose(indexrel);
 				}
 				else
 				{
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL);
+					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple);
 				}
 			}
 			else
 			{
 				elog(DEBUG1, "old tuple is not null");
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple);
 			}
 			break;
 		case REORDER_BUFFER_CHANGE_DELETE:
@@ -1106,12 +1078,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			if (indexrel != NULL)
 			{
 				indexdesc = RelationGetDescr(indexrel);
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, indexdesc);
+				identity_to_stringinfo(ctx, indexdesc, &change->data.tp.oldtuple->tuple);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple);
 			}
 
 			if (change->data.tp.oldtuple == NULL)
