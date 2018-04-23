@@ -3,7 +3,7 @@
  * wal2json.c
  * 		JSON output plugin for changeset extraction
  *
- * Copyright (c) 2013-2018, PostgreSQL Global Development Group
+ * Copyright (c) 2013-2018, Euler Taveira de Oliveira
  *
  * IDENTIFICATION
  *		contrib/wal2json/wal2json.c
@@ -90,23 +90,23 @@ _PG_init(void)
 {
 }
 
-/* Specify output plugin callbacks 指定PG插件必须需要实现的方法在本程序的对照*/
+/* Specify output plugin callbacks */
 void
 _PG_output_plugin_init(OutputPluginCallbacks *cb)
 {
 	AssertVariableIsOfType(&_PG_output_plugin_init, LogicalOutputPluginInit);
 
 	cb->startup_cb = pg_decode_startup;
-	cb->begin_cb = pg_decode_begin_txn;//必须
-	cb->change_cb = pg_decode_change;//必须
-	cb->commit_cb = pg_decode_commit_txn;//必须
+	cb->begin_cb = pg_decode_begin_txn;
+	cb->change_cb = pg_decode_change;
+	cb->commit_cb = pg_decode_commit_txn;
 	cb->shutdown_cb = pg_decode_shutdown;
 #if	PG_VERSION_NUM >= 90600
 	cb->message_cb = pg_decode_message;
 #endif
 }
 
-/* Initialize this plugin 初始化插件，参数读取配置；当slot被创建或变更流触发情况下调用此方法*/
+/* Initialize this plugin */
 static void
 pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is_init)
 {
@@ -362,17 +362,17 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 	}
 }
 
-/* cleanup this plugin's resources 解码完毕，清除本插件资源*/
+/* cleanup this plugin's resources */
 static void
 pg_decode_shutdown(LogicalDecodingContext *ctx)
 {
-	JsonDecodingData *data = ctx->output_plugin_private;//pg提供的本插件资源
+	JsonDecodingData *data = ctx->output_plugin_private;
 
 	/* cleanup our own resources via memory context reset */
 	MemoryContextDelete(data->context);
 }
 
-/* BEGIN callback 事务开始并解码时调用，用作起始信息的拼接*/
+/* BEGIN callback */
 static void
 pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 {
@@ -421,11 +421,11 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 	else
 		appendStringInfoString(ctx->out, "\"change\":[");
 
-	if (data->write_in_chunks)//如果使用了chunk选项，则立马输出成行
+	if (data->write_in_chunks)
 		OutputPluginWrite(ctx, true);
 }
 
-/* COMMIT callback  事务提交解码时调用，用作结束信息拼接*/
+/* COMMIT callback */
 static void
 pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 					 XLogRecPtr commit_lsn)
@@ -463,30 +463,22 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 /*
  * Accumulate tuple information and stores it at the end
  *
- * replident: is this tuple a replica identity? 
+ * replident: is this tuple a replica identity?
  * hasreplident: does this tuple has an associated replica identity?
- * 用于change内容数据的拼接，将数组内容转化为相应的格式
  */
 static void
-tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc, bool replident, bool hasreplident)
+tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc, bool replident, bool hasreplident)
 {
-		
 	JsonDecodingData	*data;
-	int			natt;
+	int					natt;
 
 	StringInfoData		colnames;
 	StringInfoData		coltypes;
 	StringInfoData		coltypeoids;
 	StringInfoData		colnotnulls;
 	StringInfoData		colvalues;
-	char			*comma = "";
-	
-	
-	//如果不是修改，并且非replica identity 则跳过 （replident 用于记录主键信息）
-	if(cmptuple == NULL && !replident){
-		return;
-	}
-	
+	char				*comma = "";
+
 	data = ctx->output_plugin_private;
 
 	initStringInfo(&colnames);
@@ -496,54 +488,74 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	if (data->include_not_null)
 		initStringInfo(&colnotnulls);
 	initStringInfo(&colvalues);
-	
+
 	/*
 	 * If replident is true, it will output info about replica identity. In this
 	 * case, there are special JSON objects for it. Otherwise, it will print new
-	 * tuple data.  
+	 * tuple data.
 	 */
 	if (replident)
 	{
-
-		appendStringInfoString(&colnames, "\"oldkeys\":{");
-		appendStringInfoString(&colnames, "\"keynames\":[");
-		appendStringInfoString(&coltypes, "\"keytypes\":[");
-		if (data->include_type_oids)
-			appendStringInfoString(&coltypeoids, "\"keytypeoids\": [");
-		appendStringInfoString(&colvalues, "\"keyvalues\":[");
-
+		if (data->pretty_print)
+		{
+			appendStringInfoString(&colnames, "\t\t\t\"oldkeys\": {\n");
+			appendStringInfoString(&colnames, "\t\t\t\t\"keynames\": [");
+			appendStringInfoString(&coltypes, "\t\t\t\t\"keytypes\": [");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "\t\t\t\"keytypeoids\": [");
+			appendStringInfoString(&colvalues, "\t\t\t\t\"keyvalues\": [");
+		}
+		else
+		{
+			appendStringInfoString(&colnames, "\"oldkeys\":{");
+			appendStringInfoString(&colnames, "\"keynames\":[");
+			appendStringInfoString(&coltypes, "\"keytypes\":[");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "\"keytypeoids\": [");
+			appendStringInfoString(&colvalues, "\"keyvalues\":[");
+		}
 	}
 	else
 	{
-		appendStringInfoString(&colnames, "\"columnnames\":[");
-		appendStringInfoString(&coltypes, "\"columntypes\":[");
-		if (data->include_type_oids)
-			appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
-		if (data->include_not_null)
-			appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
-		appendStringInfoString(&colvalues, "\"columnvalues\":[");
+		if (data->pretty_print)
+		{
+			appendStringInfoString(&colnames, "\t\t\t\"columnnames\": [");
+			appendStringInfoString(&coltypes, "\t\t\t\"columntypes\": [");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "\t\t\t\"columntypeoids\": [");
+			if (data->include_not_null)
+				appendStringInfoString(&colnotnulls, "\t\t\t\"columnoptionals\": [");
+			appendStringInfoString(&colvalues, "\t\t\t\"columnvalues\": [");
+		}
+		else
+		{
+			appendStringInfoString(&colnames, "\"columnnames\":[");
+			appendStringInfoString(&coltypes, "\"columntypes\":[");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
+			if (data->include_not_null)
+				appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
+			appendStringInfoString(&colvalues, "\"columnvalues\":[");
+		}
 	}
 
 	/* Print column information (name, type, value) */
 	for (natt = 0; natt < tupdesc->natts; natt++)
 	{
 		Form_pg_attribute	attr;		/* the attribute itself */
-		Oid			typid;		/* type of current attribute */
-		HeapTuple		type_tuple;	/* information about a type */
-		Oid			typoutput;	/* output function */
-		bool			typisvarlena;
-		Datum			origval;	/* possibly toasted Datum */
-		char			*outputstr = NULL;
-		bool			isnull;		/* column is null? */
-		
-		char			*attname = NULL;
-		bool    		isFilterAtt;
+		Oid					typid;		/* type of current attribute */
+		HeapTuple			type_tuple;	/* information about a type */
+		Oid					typoutput;	/* output function */
+		bool				typisvarlena;
+		Datum				origval;	/* possibly toasted Datum */
+		Datum				val;		/* definitely detoasted Datum */
+		char				*outputstr = NULL;
+		bool				isnull;		/* column is null? */
 
 		/*
 		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
 		 * TupleDescAttr() in back branches. If the version supports
 		 * this macro, use it. Version 10 and later already support it.
-		 * 条件预编译处理
 		 */
 #if (PG_VERSION_NUM >= 90600 && PG_VERSION_NUM < 90605) || (PG_VERSION_NUM >= 90500 && PG_VERSION_NUM < 90509) || (PG_VERSION_NUM >= 90400 && PG_VERSION_NUM < 90414)
 		attr = tupdesc->attrs[natt];
@@ -557,11 +569,10 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		if (attr->attisdropped || attr->attnum < 0)
 			continue;
 
-		
-		/* Search indexed columns in whole heap tuple  在数组中找索引字段位置*/
+		/* Search indexed columns in whole heap tuple */
 		if (indexdesc != NULL)
 		{
-			int	j;
+			int		j;
 			bool	found_col = false;
 
 			for (j = 0; j < indexdesc->natts; j++)
@@ -577,12 +588,14 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 				if (strcmp(NameStr(attr->attname), NameStr(iattr->attname)) == 0)
 					found_col = true;
+
 			}
+
 			/* Print only indexed columns */
 			if (!found_col)
 				continue;
 		}
-		
+
 		typid = attr->atttypid;
 
 		/* Figure out type name */
@@ -593,116 +606,181 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		/* Get information needed for printing values of a type */
 		getTypeOutputInfo(typid, &typoutput, &typisvarlena);
 
-		/* Get Datum from tuple  myudpate*/ 
-		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);		
-		
-		/* myupdate如果是空值或者大量的数据（外部存储）则直接跳过*/
-		if (isnull)
-			continue;	
-		if (typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval))
-			continue;
-		
-		outputstr = OidOutputFunctionCall(typoutput, origval);
+		/* Get Datum from tuple */
+		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 
-		attname = NameStr(attr->attname);
-		isFilterAtt = strcmp(attname, "id") == 0 || strcmp(attname, "tenant_id") == 0 || strcmp(attname, "ei") == 0 || strcmp(attname, "describe_id") == 0;
-		if(cmptuple == NULL && !isFilterAtt){
+		/* Skip nulls iif printing key/identity */
+		if (isnull && replident)
+			continue;
+
+		if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval) && !data->include_unchanged_toast)
+		{
+			/* TOAST value is not returned if include-unchanged-toast is specified */
+			elog(DEBUG2, "column \"%s\" has an unchanged TOAST - excluding", NameStr(attr->attname));
 			continue;
 		}
-
-		// myupdate （待优化：oldtuple进入时可以带上newtuple过滤的字段信息，从而快速过滤）
-		if(cmptuple != NULL && !isFilterAtt){
-			Datum			cmpval;
-			bool			iscmpnull;	
-			
-			cmpval = heap_getattr(cmptuple, natt+1, tupdesc, &iscmpnull);
-			if(!iscmpnull && strcmp(outputstr, OidOutputFunctionCall(typoutput, cmpval)) == 0 )
-				continue;			
-		}	
 
 		/* Accumulate each column info */
 		appendStringInfoString(&colnames, comma);
 		escape_json(&colnames, NameStr(attr->attname));
 
-		ReleaseSysCache(type_tuple);
-		/*
-		 * Data types are printed with quotes unless they are number, true,
-		 * false, null, an array or an object.
-		 *
-		 * The NaN and Infinity are not valid JSON symbols. Hence,
-		 * regardless of sign they are represented as the string null.
-		 */
-		switch (typid)
+		if (data->include_types)
 		{
-			case INT2OID:
-			case INT4OID:
-			case INT8OID:
-			case OIDOID:
-			case FLOAT4OID:
-			case FLOAT8OID:
-			case NUMERICOID:
-				if (pg_strncasecmp(outputstr, "NaN", 3) == 0 ||
-						pg_strncasecmp(outputstr, "Infinity", 8) == 0 ||
-						pg_strncasecmp(outputstr, "-Infinity", 9) == 0)
-				{
-					appendStringInfo(&colvalues, "%snull", comma);
-					elog(DEBUG1, "attribute \"%s\" is special: %s", NameStr(attr->attname), outputstr);
-				}
-				else if (strspn(outputstr, "0123456789+-eE.") == strlen(outputstr))
-					appendStringInfo(&colvalues, "%s%s", comma, outputstr);
+			if (data->include_typmod)
+			{
+				char	*type_str;
+
+				type_str = TextDatumGetCString(DirectFunctionCall2(format_type, attr->atttypid, attr->atttypmod));
+				appendStringInfoString(&coltypes, comma);
+				escape_json(&coltypes, type_str);
+				pfree(type_str);
+			}
+			else
+			{
+				Form_pg_type type_form = (Form_pg_type) GETSTRUCT(type_tuple);
+				appendStringInfoString(&coltypes, comma);
+				escape_json(&coltypes, NameStr(type_form->typname));
+			}
+
+			/* oldkeys doesn't print not-null constraints */
+			if (!replident && data->include_not_null)
+			{
+				if (attr->attnotnull)
+					appendStringInfo(&colnotnulls, "%sfalse", comma);
 				else
-					elog(ERROR, "%s is not a number", outputstr);
-				break;
-			case BOOLOID:
-				if (strcmp(outputstr, "t") == 0)
-					appendStringInfo(&colvalues, "%strue", comma);
-				else
-					appendStringInfo(&colvalues, "%sfalse", comma);
-				break;
-			case BYTEAOID:
-				appendStringInfoString(&colvalues, comma);
-				// XXX: strings here are "\xC0FFEE", we strip the "\x"
-				escape_json(&colvalues, (outputstr+2));
-				break;
-			default:
-				appendStringInfoString(&colvalues, comma);
-				escape_json(&colvalues, outputstr);
-				break;
+					appendStringInfo(&colnotnulls, "%strue", comma);
+			}
+		}
+
+		if (data->include_type_oids)
+			appendStringInfo(&coltypeoids, "%s%u", comma, typid);
+
+		ReleaseSysCache(type_tuple);
+
+		if (isnull)
+		{
+			appendStringInfo(&colvalues, "%snull", comma);
+		}
+		else
+		{
+			if (typisvarlena)
+				val = PointerGetDatum(PG_DETOAST_DATUM(origval));
+			else
+				val = origval;
+
+			/* Finally got the value */
+			outputstr = OidOutputFunctionCall(typoutput, val);
+
+			/*
+			 * Data types are printed with quotes unless they are number, true,
+			 * false, null, an array or an object.
+			 *
+			 * The NaN and Infinity are not valid JSON symbols. Hence,
+			 * regardless of sign they are represented as the string null.
+			 */
+			switch (typid)
+			{
+				case INT2OID:
+				case INT4OID:
+				case INT8OID:
+				case OIDOID:
+				case FLOAT4OID:
+				case FLOAT8OID:
+				case NUMERICOID:
+					if (pg_strncasecmp(outputstr, "NaN", 3) == 0 ||
+							pg_strncasecmp(outputstr, "Infinity", 8) == 0 ||
+							pg_strncasecmp(outputstr, "-Infinity", 9) == 0)
+					{
+						appendStringInfo(&colvalues, "%snull", comma);
+						elog(DEBUG1, "attribute \"%s\" is special: %s", NameStr(attr->attname), outputstr);
+					}
+					else if (strspn(outputstr, "0123456789+-eE.") == strlen(outputstr))
+						appendStringInfo(&colvalues, "%s%s", comma, outputstr);
+					else
+						elog(ERROR, "%s is not a number", outputstr);
+					break;
+				case BOOLOID:
+					if (strcmp(outputstr, "t") == 0)
+						appendStringInfo(&colvalues, "%strue", comma);
+					else
+						appendStringInfo(&colvalues, "%sfalse", comma);
+					break;
+				case BYTEAOID:
+					appendStringInfoString(&colvalues, comma);
+					// XXX: strings here are "\xC0FFEE", we strip the "\x"
+					escape_json(&colvalues, (outputstr+2));
+					break;
+				default:
+					appendStringInfoString(&colvalues, comma);
+					escape_json(&colvalues, outputstr);
+					break;
+			}
 		}
 
 		/* The first column does not have comma */
 		if (strcmp(comma, "") == 0)
 		{
-			comma = ",";
+			if (data->pretty_print)
+				comma = ", ";
+			else
+				comma = ",";
 		}
 	}
 
 	/* Column info ends */
 	if (replident)
 	{
-		appendStringInfoString(&colnames, "],");
-		if (data->include_types)
-			appendStringInfoString(&coltypes, "],");
-		if (data->include_type_oids)
-			appendStringInfoString(&coltypeoids, "],");
-		appendStringInfoCharMacro(&colvalues, ']');
-		appendStringInfoCharMacro(&colvalues, '}');
-
+		if (data->pretty_print)
+		{
+			appendStringInfoString(&colnames, "],\n");
+			if (data->include_types)
+				appendStringInfoString(&coltypes, "],\n");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "],\n");
+			appendStringInfoString(&colvalues, "]\n");
+			appendStringInfoString(&colvalues, "\t\t\t}\n");
+		}
+		else
+		{
+			appendStringInfoString(&colnames, "],");
+			if (data->include_types)
+				appendStringInfoString(&coltypes, "],");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "],");
+			appendStringInfoCharMacro(&colvalues, ']');
+			appendStringInfoCharMacro(&colvalues, '}');
+		}
 	}
 	else
 	{
-
-		appendStringInfoString(&colnames, "],");
-		if (data->include_types)
-			appendStringInfoString(&coltypes, "],");
-		if (data->include_type_oids)
-			appendStringInfoString(&coltypeoids, "],");
-		if (data->include_not_null)
-			appendStringInfoString(&colnotnulls, "],");
-		if (hasreplident)
-			appendStringInfoString(&colvalues, "],");
+		if (data->pretty_print)
+		{
+			appendStringInfoString(&colnames, "],\n");
+			if (data->include_types)
+				appendStringInfoString(&coltypes, "],\n");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "],\n");
+			if (data->include_not_null)
+				appendStringInfoString(&colnotnulls, "],\n");
+			if (hasreplident)
+				appendStringInfoString(&colvalues, "],\n");
+			else
+				appendStringInfoString(&colvalues, "]\n");
+		}
 		else
-			appendStringInfoCharMacro(&colvalues, ']');
+		{
+			appendStringInfoString(&colnames, "],");
+			if (data->include_types)
+				appendStringInfoString(&coltypes, "],");
+			if (data->include_type_oids)
+				appendStringInfoString(&coltypeoids, "],");
+			if (data->include_not_null)
+				appendStringInfoString(&colnotnulls, "],");
+			if (hasreplident)
+				appendStringInfoString(&colvalues, "],");
+			else
+				appendStringInfoCharMacro(&colvalues, ']');
+		}
 	}
 
 	/* Print data */
@@ -715,7 +793,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		appendStringInfoString(ctx->out, colnotnulls.data);
 	appendStringInfoString(ctx->out, colvalues.data);
 
-	
 	pfree(colnames.data);
 	pfree(coltypes.data);
 	if (data->include_type_oids)
@@ -727,20 +804,20 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 /* Print columns information */
 static void
-columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, HeapTuple cmptuple, bool hasreplident)
+columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, bool hasreplident)
 {
-	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, NULL, false, hasreplident);
+	tuple_to_stringinfo(ctx, tupdesc, tuple, NULL, false, hasreplident);
 }
 
 /* Print replica identity information */
 static void
-identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple,HeapTuple cmptuple, TupleDesc indexdesc)
+identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc)
 {
 	/* Last parameter does not matter */
-	tuple_to_stringinfo(ctx, tupdesc, tuple, cmptuple, indexdesc, true, false);
+	tuple_to_stringinfo(ctx, tupdesc, tuple, indexdesc, true, false);
 }
 
-/* Callback for individual changed tuples ，change内容操作起始点*/
+/* Callback for individual changed tuples */
 static void
 pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				 Relation relation, ReorderBufferChange *change)
@@ -755,7 +832,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 	char		*schemaname;
 	char		*tablename;
-
 
 	AssertVariableIsOfType(&pg_decode_change, LogicalDecodeChangeCB);
 
@@ -892,12 +968,26 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	data->nr_changes++;
 
 	/* Change starts */
+	if (data->pretty_print)
+	{
+		/* if we don't write in chunks, we need a newline here */
+		if (!data->write_in_chunks)
+			appendStringInfoChar(ctx->out, '\n');
 
-	if (data->nr_changes > 1)
-		appendStringInfoString(ctx->out, ",{");
+		appendStringInfoString(ctx->out, "\t\t");
+
+		if (data->nr_changes > 1)
+			appendStringInfoChar(ctx->out, ',');
+
+		appendStringInfoString(ctx->out, "{\n");
+	}
 	else
-		appendStringInfoCharMacro(ctx->out, '{');
-
+	{
+		if (data->nr_changes > 1)
+			appendStringInfoString(ctx->out, ",{");
+		else
+			appendStringInfoCharMacro(ctx->out, '{');
+	}
 
 	/* Print change kind */
 	switch (change->action)
@@ -925,51 +1015,41 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	}
 
 	/* Print table name (possibly) qualified */
-     	if (data->include_schemas) {
-        	appendStringInfoString(ctx->out, "\"schema\":");
-         	escape_json(ctx->out, get_namespace_name(class_form->relnamespace));
-        	appendStringInfoCharMacro(ctx->out, ',');
-     	}
-    	appendStringInfoString(ctx->out, "\"table\":");
-   	escape_json(ctx->out, NameStr(class_form->relname));
-   	appendStringInfoCharMacro(ctx->out, ',');
+	if (data->pretty_print)
+	{
+		if (data->include_schemas)
+		{
+			appendStringInfoString(ctx->out, "\t\t\t\"schema\": ");
+			escape_json(ctx->out, get_namespace_name(class_form->relnamespace));
+			appendStringInfoString(ctx->out, ",\n");
+		}
+		appendStringInfoString(ctx->out, "\t\t\t\"table\": ");
+		escape_json(ctx->out, NameStr(class_form->relname));
+		appendStringInfoString(ctx->out, ",\n");
+	}
+	else
+	{
+		if (data->include_schemas)
+		{
+			appendStringInfoString(ctx->out, "\"schema\":");
+			escape_json(ctx->out, get_namespace_name(class_form->relnamespace));
+			appendStringInfoCharMacro(ctx->out, ',');
+		}
+		appendStringInfoString(ctx->out, "\"table\":");
+		escape_json(ctx->out, NameStr(class_form->relname));
+		appendStringInfoCharMacro(ctx->out, ',');
+	}
 
 	switch (change->action)
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
-			/* Print the new tuple myupdate*/
-// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL , false);
-			//myupdate 加入新的索引信息 		
-			indexrel = RelationIdGetRelation(relation->rd_replidindex);
-		
-			if (indexrel != NULL)
-			{	
-				indexdesc = RelationGetDescr(indexrel);
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
-				RelationClose(indexrel);
-			}
-			else
-			{
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
-			}
-
-			if (change->data.tp.newtuple == NULL)
-				elog(DEBUG1, "new tuple is null");
-			else
-				elog(DEBUG1, "new tuple is not null");
+			/* Print the new tuple */
+			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);
 			break;
-
 		case REORDER_BUFFER_CHANGE_UPDATE:
 			/* Print the new tuple */
-			if (change->data.tp.oldtuple == NULL)
-			{
- 				columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL, true);//myupdate 控制不输出一般信息
-			}
-			else
-			{
+			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, true);
 
-				columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, &change->data.tp.oldtuple->tuple, true);//myupdate 控制不输出一般信息
-			}
 			/*
 			 * The old tuple is available when:
 			 * (i) pk changes;
@@ -978,44 +1058,41 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			 *
 			 * FIXME if old tuple is not available we must get only the indexed
 			 * columns (the whole tuple is printed).
-			 */						
+			 */
 			if (change->data.tp.oldtuple == NULL)
 			{
-				
 				elog(DEBUG1, "old tuple is null");
 
 				indexrel = RelationIdGetRelation(relation->rd_replidindex);
-				
 				if (indexrel != NULL)
 				{
 					indexdesc = RelationGetDescr(indexrel);
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, indexdesc);
+					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, indexdesc);
 					RelationClose(indexrel);
 				}
 				else
 				{
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple,NULL, NULL);
+					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL);
 				}
 			}
 			else
 			{
 				elog(DEBUG1, "old tuple is not null");
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple,&change->data.tp.newtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
 			}
 			break;
 		case REORDER_BUFFER_CHANGE_DELETE:
 			/* Print the replica identity */
 			indexrel = RelationIdGetRelation(relation->rd_replidindex);
-		
 			if (indexrel != NULL)
 			{
 				indexdesc = RelationGetDescr(indexrel);
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, indexdesc);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, indexdesc);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
 			}
 
 			if (change->data.tp.oldtuple == NULL)
