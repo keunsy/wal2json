@@ -458,7 +458,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	
 // 	elog(WARNING, "result: \"%s\"", ctx->out->data);
 // 	myupdate
-// 	OutputPluginWrite(ctx, true);
+	OutputPluginWrite(ctx, true);
 }
 
 
