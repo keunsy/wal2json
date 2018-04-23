@@ -381,7 +381,7 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 	data->nr_changes = 0;
 
 	/* Transaction starts */
-	OutputPluginPrepareWrite(ctx, true);
+	OutputPluginPrepareWrite(ctx, false);
 
 	if (data->pretty_print)
 		appendStringInfoString(ctx->out, "{\n");
@@ -422,7 +422,7 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 		appendStringInfoString(ctx->out, "\"change\":[");
 
 	if (data->write_in_chunks)
-		OutputPluginWrite(ctx, true);
+		OutputPluginWrite(ctx, false);
 }
 
 /* COMMIT callback */
@@ -441,7 +441,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 	/* Transaction ends */
 	if (data->write_in_chunks)
-		OutputPluginPrepareWrite(ctx, true);
+		OutputPluginPrepareWrite(ctx, false);
 
 	if (data->pretty_print)
 	{
@@ -458,8 +458,8 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	
 // 	elog(WARNING, "result: \"%s\"", ctx->out->data);
 // 	myupdate
-// 	OutputPluginWrite(ctx, true);
-		OutputPluginWrite(ctx, false);
+// 	OutputPluginWrite(ctx, false);
+	OutputPluginWrite(ctx, false);
 }
 
 
@@ -850,7 +850,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	tablename = NameStr(class_form->relname);
 
 	if (data->write_in_chunks)
-		OutputPluginPrepareWrite(ctx, true);
+		OutputPluginPrepareWrite(ctx, false);
 
 	/* Make sure rd_replidindex is set */
 	RelationGetIndexList(relation);
@@ -1116,7 +1116,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextReset(data->context);
 
 	if (data->write_in_chunks)
-		OutputPluginWrite(ctx, true);
+		OutputPluginWrite(ctx, false);
 }
 
 #if	PG_VERSION_NUM >= 90600
@@ -1140,7 +1140,7 @@ pg_decode_message(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	 * messages.
 	 */
 	if (data->write_in_chunks || !transactional)
-		OutputPluginPrepareWrite(ctx, true);
+		OutputPluginPrepareWrite(ctx, false);
 
 	/*
 	 * increment counter only for transactional messages because
@@ -1238,7 +1238,7 @@ pg_decode_message(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextReset(data->context);
 
 	if (data->write_in_chunks || !transactional)
-		OutputPluginWrite(ctx, true);
+		OutputPluginWrite(ctx, false);
 }
 #endif
 
