@@ -849,7 +849,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	schemaname = get_namespace_name(class_form->relnamespace);
 	tablename = NameStr(class_form->relname);
 
-	if (data->write_in_chunks)
+// 	if (data->write_in_chunks) myupdate
 		OutputPluginPrepareWrite(ctx, false);
 
 	/* Make sure rd_replidindex is set */
@@ -1115,7 +1115,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
 
-	if (data->write_in_chunks)
+// 	if (data->write_in_chunks) myupdate
 		OutputPluginWrite(ctx, false);
 }
 
