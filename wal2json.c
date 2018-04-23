@@ -454,13 +454,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	else
 	{
 		appendStringInfoString(ctx->out, "]}");
-	}
-	
-	while(1)
-	{
-    		//循环体
-		elog(WARNING, "result: \"%s\"", "111");
-	}
+	}	
 	
 // 	elog(WARNING, "result: \"%s\"", ctx->out->data);
 // 	myupdate
