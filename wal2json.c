@@ -468,7 +468,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	OutputPluginWrite(ctx, true);
 	
 	while(1){
-		log(WARNING, "11111");
+		elog(WARNING, "11111");
 	}
 	
 	//myupdate
