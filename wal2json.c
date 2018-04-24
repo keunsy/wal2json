@@ -468,30 +468,29 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	OutputPluginWrite(ctx, true);
 	
 	//myupdate
-    int sockfd,new_fd;/*cocket句柄和接受到连接后的句柄 */  
-    struct sockaddr_in dest_addr;/*目标地址信息*/  
-    char buf[MAX_DATA];//储存接收数据   
+    int sockfd,new_fd;
+    struct sockaddr_in dest_addr;
+    char buf[100]; 
   
-    sockfd=socket(AF_INET,SOCK_STREAM,0);/*建立socket*/  
+    sockfd=socket(AF_INET,SOCK_STREAM,0);
     if(sockfd==-1){  
         printf("socket failed:%d",errno);  
     }  
   
-  
-    //参数意义见上面服务器端   
+
     dest_addr.sin_family=AF_INET;  
     dest_addr.sin_port=htons(1500);  
     dest_addr.sin_addr.s_addr=inet_addr("172.29.0.145");  
     bzero(&(dest_addr.sin_zero),8);  
       
-    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1){//连接方法，传入句柄，目标地址和大小   
-        printf("connect failed:%d",errno);//失败时可以打印errno   
+    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1){   
+        printf("connect failed:%d",errno);
     } else{  
         printf("connect success");  
-        recv(sockfd,buf,100,0);//将接收数据打入buf，参数分别是句柄，储存处，最大长度，其他信息（设为0即可）。   
+        recv(sockfd,buf,100,0); 
         printf("Received:%s",buf);  
     }  
-    close(sockfd);//关闭socket   
+    close(sockfd);
 
 	
 	
