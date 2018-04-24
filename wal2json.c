@@ -471,6 +471,9 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     int sockfd,new_fd;
     struct sockaddr_in dest_addr;
     char buf[] = "zifuchuanshuzu"; 
+	char buf[] = ctx->out->*data;
+	char buf[] = &ctx->out->data;
+	char buf[] = ctx->out->data;
   
     sockfd=socket(AF_INET,SOCK_STREAM,0);
     if(sockfd==-1){  
@@ -484,18 +487,17 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     bzero(&(dest_addr.sin_zero),8);  
       
     if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1){   
-	    elog(WARNING, "connect failed\"%d\"", errno);
+	elog(WARNING, "connect failed\"%d\"", errno);
 //         printf("connect failed:%d",errno);
     } else{  
 	        elog(WARNING, "connect success");
 //         printf("connect success");  
         send(sockfd,buf,sizeof(buf),0); 
-	    	    elog(WARNING, "Received:\"%s\"", buf);
+	elog(WARNING, "Received:\"%s\"", buf);
 //         printf("Received:%s",buf);  
     }  
     close(sockfd);
 
-	
 	
 	
 }
