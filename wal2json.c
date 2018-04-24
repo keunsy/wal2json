@@ -1,15 +1,3 @@
-/*-------------------------------------------------------------------------
- *
- * wal2json.c
- * 		JSON output plugin for changeset extraction
- *
- * Copyright (c) 2013-2018, Euler Taveira de Oliveira
- *
- * IDENTIFICATION
- *		contrib/wal2json/wal2json.c
- *
- *-------------------------------------------------------------------------
- */
 #include "postgres.h"
 
 #include "catalog/pg_type.h"
@@ -23,15 +11,6 @@
 #include "utils/pg_lsn.h"
 #include "utils/rel.h"
 #include "utils/syscache.h"
-
-#include <stdio.h>  
-#include <stdlib.h>  
-#include <errno.h>  
-#include <string.h>  
-#include <sys/types.h>  
-#include <netinet/in.h>  
-#include <sys/socket.h>  
-#include <sys/wait.h> 
 
 PG_MODULE_MAGIC;
 
@@ -466,40 +445,6 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	}
 
 	OutputPluginWrite(ctx, true);
-	
-	while(1){
-		elog(WARNING, "11111");
-	}
-	
-	//myupdate
-    int sockfd;
-    struct sockaddr_in dest_addr;
-    char	   *buf;
-    buf = ctx->out->data; 
-    sockfd=socket(AF_INET,SOCK_STREAM,0);
-    if(sockfd==-1){  
-	elog(WARNING, "socket failed\"%d\"", errno);
-//         printf("socket failed:%d",errno);  
-    }  
- 
-    dest_addr.sin_family=AF_INET;  
-    dest_addr.sin_port=htons(1500);  
-    dest_addr.sin_addr.s_addr=inet_addr("172.29.0.145");  
-    bzero(&(dest_addr.sin_zero),8);  
-      
-    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1){   
-	elog(WARNING, "connect failed\"%d\"", errno);
-//         printf("connect failed:%d",errno);
-    } else{  
-	        elog(WARNING, "connect success");
-//         printf("connect success");  
-        send(sockfd,buf,strlen(buf),0); 
-//         printf("Received:%s",buf);  
-    }  
-    close(sockfd);
-
-	
-	
 }
 
 
