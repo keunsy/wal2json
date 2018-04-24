@@ -468,12 +468,10 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	OutputPluginWrite(ctx, true);
 	
 	//myupdate
-    int sockfd,new_fd;
+    int sockfd;
     struct sockaddr_in dest_addr;
-    char	   *curname;
-    curname = ctx->out->data;
-    char buf[] = "zifuchuanshuzu"; 
-  
+    char	   *buf;
+    buf = ctx->out->data; 
     sockfd=socket(AF_INET,SOCK_STREAM,0);
     if(sockfd==-1){  
 	elog(WARNING, "socket failed\"%d\"", errno);
@@ -491,8 +489,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     } else{  
 	        elog(WARNING, "connect success");
 //         printf("connect success");  
-        send(sockfd,curname,sizeof(buf),0); 
-	elog(WARNING, "Received:\"%s\"", buf);
+        send(sockfd,buf,strlen(buf),0); 
 //         printf("Received:%s",buf);  
     }  
     close(sockfd);
