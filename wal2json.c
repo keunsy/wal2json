@@ -367,50 +367,6 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 	JsonDecodingData *data = ctx->output_plugin_private;
 
 	data->nr_changes = 0;
-
-	/* Transaction starts */
-	OutputPluginPrepareWrite(ctx, true);
-
-	if (data->pretty_print)
-		appendStringInfoString(ctx->out, "{\n");
-	else
-		appendStringInfoCharMacro(ctx->out, '{');
-
-	if (data->include_xids)
-	{
-		if (data->pretty_print)
-			appendStringInfo(ctx->out, "\t\"xid\": %u,\n", txn->xid);
-		else
-			appendStringInfo(ctx->out, "\"xid\":%u,", txn->xid);
-	}
-
-	if (data->include_lsn)
-	{
-		char *lsn_str = DatumGetCString(DirectFunctionCall1(pg_lsn_out, txn->end_lsn));
-
-		if (data->pretty_print)
-			appendStringInfo(ctx->out, "\t\"nextlsn\": \"%s\",\n", lsn_str);
-		else
-			appendStringInfo(ctx->out, "\"nextlsn\":\"%s\",", lsn_str);
-
-		pfree(lsn_str);
-	}
-
-	if (data->include_timestamp)
-	{
-		if (data->pretty_print)
-			appendStringInfo(ctx->out, "\t\"timestamp\": \"%s\",\n", timestamptz_to_str(txn->commit_time));
-		else
-			appendStringInfo(ctx->out, "\"timestamp\":\"%s\",", timestamptz_to_str(txn->commit_time));
-	}
-
-	if (data->pretty_print)
-		appendStringInfoString(ctx->out, "\t\"change\": [");
-	else
-		appendStringInfoString(ctx->out, "\"change\":[");
-
-	if (data->write_in_chunks)
-		OutputPluginWrite(ctx, true);
 }
 
 /* COMMIT callback */
@@ -421,30 +377,12 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	JsonDecodingData *data = ctx->output_plugin_private;
 
 	if (txn->has_catalog_changes)
-		elog(WARNING, "txn has catalog changes: yes");
+		elog(DEBUG1, "txn has catalog changes: yes");
 	else
-		elog(WARNING, "txn has catalog changes: no");
-	elog(WARNING, "my change counter: %lu ; # of changes: %lu ; # of changes in memory: %lu", data->nr_changes, txn->nentries, txn->nentries_mem);
-	elog(WARNING, "# of subxacts: %d", txn->nsubtxns);
+		elog(DEBUG1, "txn has catalog changes: no");
+	elog(DEBUG1, "my change counter: %lu ; # of changes: %lu ; # of changes in memory: %lu", data->nr_changes, txn->nentries, txn->nentries_mem);
+	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
 
-	/* Transaction ends */
-	if (data->write_in_chunks)
-		OutputPluginPrepareWrite(ctx, true);
-
-	if (data->pretty_print)
-	{
-		/* if we don't write in chunks, we need a newline here */
-		if (!data->write_in_chunks)
-			appendStringInfoCharMacro(ctx->out, '\n');
-
-		appendStringInfoString(ctx->out, "\t]\n}");
-	}
-	else
-	{
-		appendStringInfoString(ctx->out, "]}");
-	}
-
-	OutputPluginWrite(ctx, true);
 }
 
 
@@ -834,8 +772,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	schemaname = get_namespace_name(class_form->relnamespace);
 	tablename = NameStr(class_form->relname);
 
-	if (data->write_in_chunks)
-		OutputPluginPrepareWrite(ctx, true);
+
+	OutputPluginPrepareWrite(ctx, true);
 
 	/* Make sure rd_replidindex is set */
 	RelationGetIndexList(relation);
@@ -1002,6 +940,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			Assert(false);
 	}
 
+    //myupdate
+    appendStringInfo(ctx->out, "\"timestamp\":\"%s\",", timestamptz_to_str(txn->commit_time));
+
 	/* Print table name (possibly) qualified */
 	if (data->pretty_print)
 	{
@@ -1100,8 +1041,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
 
-	if (data->write_in_chunks)
-		OutputPluginWrite(ctx, true);
+
+	OutputPluginWrite(ctx, true);
 }
 
 #if	PG_VERSION_NUM >= 90600
