@@ -474,21 +474,24 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
   
     sockfd=socket(AF_INET,SOCK_STREAM,0);
     if(sockfd==-1){  
-        printf("socket failed:%d",errno);  
+	elog(WARNING, "socket failed\"%d\"", errno);
+//         printf("socket failed:%d",errno);  
     }  
-  
-
+ 
     dest_addr.sin_family=AF_INET;  
     dest_addr.sin_port=htons(1500);  
     dest_addr.sin_addr.s_addr=inet_addr("172.29.0.145");  
     bzero(&(dest_addr.sin_zero),8);  
       
     if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1){   
-        printf("connect failed:%d",errno);
+	    elog(WARNING, "connect failed\"%d\"", errno);
+//         printf("connect failed:%d",errno);
     } else{  
-        printf("connect success");  
+	        elog(WARNING, "connect success");
+//         printf("connect success");  
         recv(sockfd,buf,100,0); 
-        printf("Received:%s",buf);  
+	    	    elog(WARNING, "Received:\"%s\"", buf);
+//         printf("Received:%s",buf);  
     }  
     close(sockfd);
 
