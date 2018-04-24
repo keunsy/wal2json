@@ -467,6 +467,10 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 	OutputPluginWrite(ctx, true);
 	
+	while(1){
+		log(WARNING, "11111");
+	}
+	
 	//myupdate
     int sockfd;
     struct sockaddr_in dest_addr;
