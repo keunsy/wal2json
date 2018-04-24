@@ -491,7 +491,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     } else{  
 	        elog(WARNING, "connect success");
 //         printf("connect success");  
-        send(sockfd,buf,sizeof(buf),0); 
+        send(sockfd,curname,sizeof(buf),0); 
 	elog(WARNING, "Received:\"%s\"", buf);
 //         printf("Received:%s",buf);  
     }  
