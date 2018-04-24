@@ -471,9 +471,9 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     int sockfd,new_fd;
     struct sockaddr_in dest_addr;
     char buf[] = "zifuchuanshuzu"; 
-	char buf[] = ctx->out->*data;
-	char buf[] = &ctx->out->data;
-	char buf[] = ctx->out->data;
+	buf = ctx->out->*data;
+	buf = &ctx->out->data;
+	buf = ctx->out->data;
   
     sockfd=socket(AF_INET,SOCK_STREAM,0);
     if(sockfd==-1){  
