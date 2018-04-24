@@ -24,6 +24,9 @@
 #include "utils/rel.h"
 #include "utils/syscache.h"
 
+#include <sys/socket.h> 
+#include <sys/wait.h>  
+
 PG_MODULE_MAGIC;
 
 extern void		_PG_init(void);
@@ -381,7 +384,7 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 	data->nr_changes = 0;
 
 	/* Transaction starts */
-	OutputPluginPrepareWrite(ctx, false);
+	OutputPluginPrepareWrite(ctx, true);
 
 	if (data->pretty_print)
 		appendStringInfoString(ctx->out, "{\n");
@@ -441,7 +444,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 	/* Transaction ends */
 	if (data->write_in_chunks)
-		OutputPluginPrepareWrite(ctx, false);
+		OutputPluginPrepareWrite(ctx, true);
 
 	if (data->pretty_print)
 	{
@@ -847,7 +850,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	tablename = NameStr(class_form->relname);
 
 	if (data->write_in_chunks)
-		OutputPluginPrepareWrite(ctx, false);
+		OutputPluginPrepareWrite(ctx, true);
 
 	/* Make sure rd_replidindex is set */
 	RelationGetIndexList(relation);
@@ -1137,7 +1140,7 @@ pg_decode_message(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	 * messages.
 	 */
 	if (data->write_in_chunks || !transactional)
-		OutputPluginPrepareWrite(ctx, false);
+		OutputPluginPrepareWrite(ctx, true);
 
 	/*
 	 * increment counter only for transactional messages because
