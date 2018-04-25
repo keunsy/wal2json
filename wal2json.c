@@ -381,13 +381,6 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
             {
                 data->socket_port = atoi(strVal(elem->arg));
             }
-//            else if (!parse_int(strVal(elem->arg),&data->socket_port))
-//
-//
-//            	ereport(ERROR,
-//            			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-//            			 errmsg("could not parse value \"%s\" for parameter \"%s\"",
-//            				 strVal(elem->arg), elem->defname)));
         }
 		else
 		{
