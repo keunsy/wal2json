@@ -1,3 +1,15 @@
+/*-------------------------------------------------------------------------
+ *
+ * wal2json.c
+ * 		JSON output plugin for changeset extraction
+ *
+ * Copyright (c) 2013-2018, PostgreSQL Global Development Group
+ *
+ * IDENTIFICATION
+ *		contrib/wal2json/wal2json.c
+ *
+ *-------------------------------------------------------------------------
+ */
 #include "postgres.h"
 
 #include "catalog/pg_type.h"
@@ -11,15 +23,6 @@
 #include "utils/pg_lsn.h"
 #include "utils/rel.h"
 #include "utils/syscache.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
 
 PG_MODULE_MAGIC;
 
@@ -52,10 +55,6 @@ typedef struct
 
 	uint64		nr_changes;			/* # of passes in pg_decode_change() */
 									/* FIXME replace with txn->nentries */
-
-	int		    socket_port;	        /* port FIXME */
-	char		*socket_ip;	            /* ip */
-
 } JsonDecodingData;
 
 typedef struct SelectTable
@@ -91,23 +90,23 @@ _PG_init(void)
 {
 }
 
-/* Specify output plugin callbacks */
+/* Specify output plugin callbacks 指定PG插件必须需要实现的方法在本程序的对照*/
 void
 _PG_output_plugin_init(OutputPluginCallbacks *cb)
 {
 	AssertVariableIsOfType(&_PG_output_plugin_init, LogicalOutputPluginInit);
 
 	cb->startup_cb = pg_decode_startup;
-	cb->begin_cb = pg_decode_begin_txn;
-	cb->change_cb = pg_decode_change;
-	cb->commit_cb = pg_decode_commit_txn;
+	cb->begin_cb = pg_decode_begin_txn;//必须
+	cb->change_cb = pg_decode_change;//必须
+	cb->commit_cb = pg_decode_commit_txn;//必须
 	cb->shutdown_cb = pg_decode_shutdown;
 #if	PG_VERSION_NUM >= 90600
 	cb->message_cb = pg_decode_message;
 #endif
 }
 
-/* Initialize this plugin */
+/* Initialize this plugin 初始化插件，参数读取配置；当slot被创建或变更流触发情况下调用此方法*/
 static void
 pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is_init)
 {
@@ -138,9 +137,6 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 	data->include_not_null = false;
 	data->include_unchanged_toast = true;
 	data->filter_tables = NIL;
-
-    //myupdate
-	data->socket_port = 0;
 
 	/* add all tables in all schemas by default */
 	t = palloc0(sizeof(SelectTable));
@@ -355,24 +351,6 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 				pfree(rawstr);
 			}
 		}
-		//myupdate
-		else if (strcmp(elem->defname, "socket-ip") == 0)
-        {
-        	data->socket_ip = strVal(elem->arg);
-        }
-        else if (strcmp(elem->defname, "socket-port") == 0)
-        {
-            if (elem->arg == NULL)
-            {
-            	elog(LOG, "socket-port argument is null");
-            	data->socket_port = 0;
-            }
-            else if (!parse_int(strVal(elem->arg), &data->socket_port))
-            	ereport(ERROR,
-            			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-            			 errmsg("could not parse value \"%s\" for parameter \"%s\"",
-            				 strVal(elem->arg), elem->defname)));
-        }
 		else
 		{
 			ereport(ERROR,
@@ -384,26 +362,70 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 	}
 }
 
-/* cleanup this plugin's resources */
+/* cleanup this plugin's resources 解码完毕，清除本插件资源*/
 static void
 pg_decode_shutdown(LogicalDecodingContext *ctx)
 {
-	JsonDecodingData *data = ctx->output_plugin_private;
+	JsonDecodingData *data = ctx->output_plugin_private;//pg提供的本插件资源
 
 	/* cleanup our own resources via memory context reset */
 	MemoryContextDelete(data->context);
 }
 
-/* BEGIN callback */
+/* BEGIN callback 事务开始并解码时调用，用作起始信息的拼接*/
 static void
 pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 {
 	JsonDecodingData *data = ctx->output_plugin_private;
 
 	data->nr_changes = 0;
+
+	/* Transaction starts */
+	OutputPluginPrepareWrite(ctx, true);
+
+	if (data->pretty_print)
+		appendStringInfoString(ctx->out, "{\n");
+	else
+		appendStringInfoCharMacro(ctx->out, '{');
+
+	if (data->include_xids)
+	{
+		if (data->pretty_print)
+			appendStringInfo(ctx->out, "\t\"xid\": %u,\n", txn->xid);
+		else
+			appendStringInfo(ctx->out, "\"xid\":%u,", txn->xid);
+	}
+
+	if (data->include_lsn)
+	{
+		char *lsn_str = DatumGetCString(DirectFunctionCall1(pg_lsn_out, txn->end_lsn));
+
+		if (data->pretty_print)
+			appendStringInfo(ctx->out, "\t\"nextlsn\": \"%s\",\n", lsn_str);
+		else
+			appendStringInfo(ctx->out, "\"nextlsn\":\"%s\",", lsn_str);
+
+		pfree(lsn_str);
+	}
+
+	if (data->include_timestamp)
+	{
+		if (data->pretty_print)
+			appendStringInfo(ctx->out, "\t\"timestamp\": \"%s\",\n", timestamptz_to_str(txn->commit_time));
+		else
+			appendStringInfo(ctx->out, "\"timestamp\":\"%s\",", timestamptz_to_str(txn->commit_time));
+	}
+
+	if (data->pretty_print)
+		appendStringInfoString(ctx->out, "\t\"change\": [");
+	else
+		appendStringInfoString(ctx->out, "\"change\":[");
+
+	if (data->write_in_chunks)//如果使用了chunk选项，则立马输出成行
+		OutputPluginWrite(ctx, true);
 }
 
-/* COMMIT callback */
+/* COMMIT callback  事务提交解码时调用，用作结束信息拼接*/
 static void
 pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 					 XLogRecPtr commit_lsn)
@@ -417,6 +439,24 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	elog(DEBUG1, "my change counter: %lu ; # of changes: %lu ; # of changes in memory: %lu", data->nr_changes, txn->nentries, txn->nentries_mem);
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
 
+	/* Transaction ends */
+	if (data->write_in_chunks)
+		OutputPluginPrepareWrite(ctx, true);
+
+	if (data->pretty_print)
+	{
+		/* if we don't write in chunks, we need a newline here */
+		if (!data->write_in_chunks)
+			appendStringInfoCharMacro(ctx->out, '\n');
+
+		appendStringInfoString(ctx->out, "\t]\n}");
+	}
+	else
+	{
+		appendStringInfoString(ctx->out, "]}");
+	}
+
+	OutputPluginWrite(ctx, true);
 }
 
 
@@ -425,9 +465,10 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
  *
  * replident: is this tuple a replica identity?
  * hasreplident: does this tuple has an associated replica identity?
+ * 用于change内容数据的拼接，将数组内容转化为相应的格式
  */
 static void
-tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc, bool replident, bool hasreplident)
+tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple , bool replident, bool hasreplident)
 {
 	JsonDecodingData	*data;
 	int					natt;
@@ -513,7 +554,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		bool				isnull;		/* column is null? */
 
 		/*
-		 * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
 		 * TupleDescAttr() in back branches. If the version supports
 		 * this macro, use it. Version 10 and later already support it.
 		 */
@@ -525,36 +565,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		elog(DEBUG1, "attribute \"%s\" (%d/%d)", NameStr(attr->attname), natt, tupdesc->natts);
 
-		/* Do not print dropped or system columns */
+		/* Do not print dropped or system columns*/
 		if (attr->attisdropped || attr->attnum < 0)
 			continue;
-
-		/* Search indexed columns in whole heap tuple */
-		if (indexdesc != NULL)
-		{
-			int		j;
-			bool	found_col = false;
-
-			for (j = 0; j < indexdesc->natts; j++)
-			{
-				Form_pg_attribute	iattr;
-
-				/* See explanation a few lines above. */
-#if (PG_VERSION_NUM >= 90600 && PG_VERSION_NUM < 90605) || (PG_VERSION_NUM >= 90500 && PG_VERSION_NUM < 90509) || (PG_VERSION_NUM >= 90400 && PG_VERSION_NUM < 90414)
-				iattr = indexdesc->attrs[j];
-#else
-				iattr = TupleDescAttr(indexdesc, j);
-#endif
-
-				if (strcmp(NameStr(attr->attname), NameStr(iattr->attname)) == 0)
-					found_col = true;
-
-			}
-
-			/* Print only indexed columns */
-			if (!found_col)
-				continue;
-		}
 
 		typid = attr->atttypid;
 
@@ -766,53 +779,18 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 static void
 columns_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, bool hasreplident)
 {
-	tuple_to_stringinfo(ctx, tupdesc, tuple, NULL, false, hasreplident);
+	tuple_to_stringinfo(ctx, tupdesc, tuple, false, hasreplident);
 }
 
 /* Print replica identity information */
 static void
-identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tuple, TupleDesc indexdesc)
+identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc indexdesc, HeapTuple tuple)
 {
 	/* Last parameter does not matter */
-	tuple_to_stringinfo(ctx, tupdesc, tuple, indexdesc, true, false);
+	tuple_to_stringinfo(ctx, indexdesc, tuple, true, false);
 }
 
-//myupdate 发送socket
-static void
-send_by_socket(LogicalDecodingContext *ctx)
-{
-	int sockfd;
-    struct sockaddr_in dest_addr;
-    char	   *buf;
-
-    JsonDecodingData *data = ctx->output_plugin_private;
-
-    dest_addr.sin_family=AF_INET;
-    //   fixme 参数从sql语句配入 ，检查参数是否正常，如果缺失则直接  （测试return是否可以进行中断）
-    dest_addr.sin_port=htons(data->socket_port);
-    dest_addr.sin_addr.s_addr=inet_addr(data->socket_ip);
-    bzero(&(dest_addr.sin_zero),8);
-
-    sockfd = socket(AF_INET,SOCK_STREAM,0);
-    // 一直到发送成功为止
-    while(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
-        elog(WARNING, "connect [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
-    }
-    //传输值内容
-    buf = ctx->out->data;
-    // fixme 修改日志级别
-    elog(DEBUG2, "connect success ,start send msg");
-    //发送失败
-    while(send(sockfd,buf,strlen(buf),0) < 0){
-         elog(WARNING, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
-    }
-    // fixme 接收返回值
-
-    close(sockfd);
-}
-
-
-/* Callback for individual changed tuples */
+/* Callback for individual changed tuples ，change内容操作起始点*/
 static void
 pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				 Relation relation, ReorderBufferChange *change)
@@ -841,8 +819,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	schemaname = get_namespace_name(class_form->relnamespace);
 	tablename = NameStr(class_form->relname);
 
-
-	OutputPluginPrepareWrite(ctx, true);
+	if (data->write_in_chunks)
+		OutputPluginPrepareWrite(ctx, true);
 
 	/* Make sure rd_replidindex is set */
 	RelationGetIndexList(relation);
@@ -963,7 +941,26 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	data->nr_changes++;
 
 	/* Change starts */
-	appendStringInfoCharMacro(ctx->out, '{');
+	if (data->pretty_print)
+	{
+		/* if we don't write in chunks, we need a newline here */
+		if (!data->write_in_chunks)
+			appendStringInfoChar(ctx->out, '\n');
+
+		appendStringInfoString(ctx->out, "\t\t");
+
+		if (data->nr_changes > 1)
+			appendStringInfoChar(ctx->out, ',');
+
+		appendStringInfoString(ctx->out, "{\n");
+	}
+	else
+	{
+		if (data->nr_changes > 1)
+			appendStringInfoString(ctx->out, ",{");
+		else
+			appendStringInfoCharMacro(ctx->out, '{');
+	}
 
 	/* Print change kind */
 	switch (change->action)
@@ -989,25 +986,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 		default:
 			Assert(false);
 	}
-
-    //myupdate
-    appendStringInfo(ctx->out, "\"timestamp\":\"%s\",", timestamptz_to_str(txn->commit_time));
-
-    if (data->include_xids)
-    {
-    	appendStringInfo(ctx->out, "\"xid\":%u,", txn->xid);
-    }
-    if (data->include_lsn)
-    {
-        char *lsn_str = DatumGetCString(DirectFunctionCall1(pg_lsn_out, txn->end_lsn));
-
-        appendStringInfo(ctx->out, "\"nextlsn\":\"%s\",", lsn_str);
-
-        pfree(lsn_str);
-    }
-    appendStringInfo(ctx->out, "\"nentries\":\"%d\",", txn->nentries);
-
-
 
 	/* Print table name (possibly) qualified */
 	if (data->pretty_print)
@@ -1039,11 +1017,29 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
 			/* Print the new tuple */
-			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);
+// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, false);//myupdate 控制不输出一般信息
+			//myupdate 加入新的索引信息
+			indexrel = RelationIdGetRelation(relation->rd_replidindex);
+			if (indexrel != NULL)
+			{
+				indexdesc = RelationGetDescr(indexrel);
+				identity_to_stringinfo(ctx, indexdesc, &change->data.tp.newtuple->tuple);
+				RelationClose(indexrel);
+			}
+			else
+			{
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple);
+			}
+
+			if (change->data.tp.newtuple == NULL)
+				elog(DEBUG1, "new tuple is null");
+			else
+				elog(DEBUG1, "new tuple is not null");
 			break;
+
 		case REORDER_BUFFER_CHANGE_UPDATE:
 			/* Print the new tuple */
-			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, true);
+// 			columns_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, true);//myupdate 控制不输出一般信息
 
 			/*
 			 * The old tuple is available when:
@@ -1062,18 +1058,18 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				if (indexrel != NULL)
 				{
 					indexdesc = RelationGetDescr(indexrel);
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, indexdesc);
+					identity_to_stringinfo(ctx, indexdesc, &change->data.tp.newtuple->tuple);
 					RelationClose(indexrel);
 				}
 				else
 				{
-					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple, NULL);
+					identity_to_stringinfo(ctx, tupdesc, &change->data.tp.newtuple->tuple);
 				}
 			}
 			else
 			{
 				elog(DEBUG1, "old tuple is not null");
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple);
 			}
 			break;
 		case REORDER_BUFFER_CHANGE_DELETE:
@@ -1082,12 +1078,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			if (indexrel != NULL)
 			{
 				indexdesc = RelationGetDescr(indexrel);
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, indexdesc);
+				identity_to_stringinfo(ctx, indexdesc, &change->data.tp.oldtuple->tuple);
 				RelationClose(indexrel);
 			}
 			else
 			{
-				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple);
 			}
 
 			if (change->data.tp.oldtuple == NULL)
@@ -1107,15 +1103,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
 
-    //myupdate 转入socket 并将ctx->初始化 为事务数量
-    if (data->socket_port != 0 && data->socket_ip !=NULL){
-
-        send_by_socket(ctx);
-        initStringInfo(ctx->out);
-        appendStringInfoString(ctx->out, "success");
-    }
-
-	OutputPluginWrite(ctx, true);
+	if (data->write_in_chunks)
+		OutputPluginWrite(ctx, true);
 }
 
 #if	PG_VERSION_NUM >= 90600
