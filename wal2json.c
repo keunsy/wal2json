@@ -794,20 +794,17 @@ send_by_socket(LogicalDecodingContext *ctx)
     bzero(&(dest_addr.sin_zero),8);
 
     sockfd = socket(AF_INET,SOCK_STREAM,0);
-
     // 一直到发送成功为止
     while(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
-        elog(WARNING, "connect failed for \"%s\" ,errono: \"%d\"", strerror(errno) , errno);
+        elog(WARNING, "connect [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
     }
     //传输值内容
     buf = ctx->out->data;
-
     // fixme 修改日志级别
-    elog(WARNING, "connect success ,start send msg");
-
+    elog(DEBUG2, "connect success ,start send msg");
     //发送失败
     while(send(sockfd,buf,strlen(buf),0) < 0){
-         elog(WARNING, "send failed for \"%s\" ,errono: \"%d\"", strerror(errno) , errno);
+         elog(WARNING, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
     }
     // fixme 接收返回值
 
@@ -995,6 +992,22 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     //myupdate
     appendStringInfo(ctx->out, "\"timestamp\":\"%s\",", timestamptz_to_str(txn->commit_time));
+
+    if (data->include_xids)
+    {
+    	appendStringInfo(ctx->out, "\"xid\":%u,", txn->xid);
+    }
+    if (data->include_lsn)
+    {
+        char *lsn_str = DatumGetCString(DirectFunctionCall1(pg_lsn_out, txn->end_lsn));
+
+        appendStringInfo(ctx->out, "\"nextlsn\":\"%s\",", lsn_str);
+
+        pfree(lsn_str);
+    }
+    appendStringInfo(ctx->out, "\"nentries\":\"%d\",", txn->nentries);
+
+
 
 	/* Print table name (possibly) qualified */
 	if (data->pretty_print)
