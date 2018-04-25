@@ -1005,8 +1005,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
         pfree(lsn_str);
     }
-    appendStringInfo(ctx->out, "\"nentries\":\"%d\",", txn->nentries);
-
+    appendStringInfo(ctx->out, "\"total_num\":\"%d\",", txn->nentries);
+    appendStringInfo(ctx->out, "\"current_num\":\"%d\",", data->nr_changes);
 
 
 	/* Print table name (possibly) qualified */
