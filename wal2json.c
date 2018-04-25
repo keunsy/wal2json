@@ -769,7 +769,7 @@ send_by_socket(LogicalDecodingContext *ctx)
     //   fixme 参数从sql语句配入 ，检查参数是否正常，如果缺失则直接  （测试return是否可以进行中断）
     dest_addr.sin_port=htons(1500);
     dest_addr.sin_addr.s_addr=inet_addr("172.29.0.145");
-    bzero(&(dest_addr.sin_zero),8)
+    bzero(&(dest_addr.sin_zero),8);
 
     //   fixme 一直到发送成功为止，并接受返回值，防止消费失败
     if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1){
@@ -1065,7 +1065,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     send_by_socket(ctx);
 
     initStringInfo(ctx->out);
-    appendStringInfoString(ctx->out, 'success');
+    appendStringInfoString(ctx->out, "success");
 
 	OutputPluginWrite(ctx, true);
 }
