@@ -139,6 +139,10 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 	data->include_unchanged_toast = true;
 	data->filter_tables = NIL;
 
+    //myupdate
+	data->socket_port = 0;
+	data->socket_ip = NIL;
+
 	/* add all tables in all schemas by default */
 	t = palloc0(sizeof(SelectTable));
 	t->allschemas = true;
@@ -362,6 +366,7 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
             if (elem->arg == NULL)
             {
             	elog(LOG, "socket-port argument is null");
+            	data->socket-port = 0;
             }
             else if (!parse_int(strVal(elem->arg), &data->socket_port))
             	ereport(ERROR,
@@ -1091,7 +1096,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextReset(data->context);
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
-    if (data->socket_port != NULL && data->socket_ip !=NULL){
+    if (data->socket_port != 0 && data->socket_ip !=NULL){
 
         send_by_socket(ctx);
         initStringInfo(ctx->out);
