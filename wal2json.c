@@ -12,6 +12,15 @@
 #include "utils/rel.h"
 #include "utils/syscache.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+
 PG_MODULE_MAGIC;
 
 extern void		_PG_init(void);
@@ -743,6 +752,36 @@ identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple
 	tuple_to_stringinfo(ctx, tupdesc, tuple, indexdesc, true, false);
 }
 
+//myupdate 发送socket
+static void
+send_by_socket(LogicalDecodingContext *ctx)
+{
+	int sockfd;
+    struct sockaddr_in dest_addr;
+    char	   *buf;
+    buf = ctx->out->data;
+    sockfd=socket(AF_INET,SOCK_STREAM,0);
+    if(sockfd==-1){
+//        fixme 日志级别需要修改
+        elog(WARNING, "socket failed\"%d\"", errno);
+    }
+    dest_addr.sin_family=AF_INET;
+    //   fixme 参数从sql语句配入 ，检查参数是否正常，如果缺失则直接  （测试return是否可以进行中断）
+    dest_addr.sin_port=htons(1500);
+    dest_addr.sin_addr.s_addr=inet_addr("172.29.0.145");
+    bzero(&(dest_addr.sin_zero),8)
+
+    //   fixme 一直到发送成功为止，并接受返回值，防止消费失败
+    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1){
+        elog(WARNING, "connect failed\"%d\"", errno);
+    } else{
+        elog(WARNING, "connect success ,start send msg");
+        send(sockfd,buf,strlen(buf),0);
+    }
+    close(sockfd);
+}
+
+
 /* Callback for individual changed tuples */
 static void
 pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
@@ -894,26 +933,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	data->nr_changes++;
 
 	/* Change starts */
-	if (data->pretty_print)
-	{
-		/* if we don't write in chunks, we need a newline here */
-		if (!data->write_in_chunks)
-			appendStringInfoChar(ctx->out, '\n');
-
-		appendStringInfoString(ctx->out, "\t\t");
-
-		if (data->nr_changes > 1)
-			appendStringInfoChar(ctx->out, ',');
-
-		appendStringInfoString(ctx->out, "{\n");
-	}
-	else
-	{
-		if (data->nr_changes > 1)
-			appendStringInfoString(ctx->out, ",{");
-		else
-			appendStringInfoCharMacro(ctx->out, '{');
-	}
+	appendStringInfoCharMacro(ctx->out, '{');
 
 	/* Print change kind */
 	switch (change->action)
@@ -1041,6 +1061,11 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
 
+    //myupdate 转入socket 并将ctx->初始化 为事务数量
+    send_by_socket(ctx);
+
+    initStringInfo(ctx->out);
+    appendStringInfoString(ctx->out, 'success');
 
 	OutputPluginWrite(ctx, true);
 }
