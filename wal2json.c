@@ -779,7 +779,7 @@ send_by_socket(LogicalDecodingContext *ctx)
     elog(WARNING, "connect success ,start send msg");
 
     //发送失败
-    while(send(sockfd,buf,strlen(buf),0)) < 0){
+    while(send(sockfd,buf,strlen(buf),0) < 0){
          elog(WARNING, "send failed for \"%s\" ,errono: \"%d\"", strerror(errno) , errno);
     }
     // fixme 接收返回值
