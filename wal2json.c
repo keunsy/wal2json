@@ -20,6 +20,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <arpa/inet.h>
 
 PG_MODULE_MAGIC;
 
@@ -85,6 +86,7 @@ static void pg_decode_message(LogicalDecodingContext *ctx,
 
 static bool parse_table_identifier(List *qualified_tables, char separator, List **select_tables);
 static bool string_to_SelectTable(char *rawstring, char separator, List **select_tables);
+
 
 void
 _PG_init(void)
@@ -367,7 +369,7 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
             	elog(LOG, "socket-port argument is null");
             	data->socket_port = 0;
             }
-            else if (!parse_int(strVal(elem->arg), &data->socket_port))
+            else if (!parse_int(strVal(elem->arg), 0, 0 ,&data->socket_port))
             	ereport(ERROR,
             			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
             			 errmsg("could not parse value \"%s\" for parameter \"%s\"",
@@ -788,7 +790,6 @@ send_by_socket(LogicalDecodingContext *ctx)
     JsonDecodingData *data = ctx->output_plugin_private;
 
     dest_addr.sin_family=AF_INET;
-    //   fixme 参数从sql语句配入 ，检查参数是否正常，如果缺失则直接  （测试return是否可以进行中断）
     dest_addr.sin_port=htons(data->socket_port);
     dest_addr.sin_addr.s_addr=inet_addr(data->socket_ip);
     bzero(&(dest_addr.sin_zero),8);
@@ -1005,8 +1006,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
         pfree(lsn_str);
     }
-    appendStringInfo(ctx->out, "\"total_num\":\"%d\",", txn->nentries);
-    appendStringInfo(ctx->out, "\"current_num\":\"%d\",", data->nr_changes);
+    appendStringInfo(ctx->out, "\"total_num\":\"%u\",", txn->nentries);
+    appendStringInfo(ctx->out, "\"current_num\":\"%u\",", data->nr_changes);
 
 
 	/* Print table name (possibly) qualified */
