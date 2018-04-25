@@ -52,6 +52,10 @@ typedef struct
 
 	uint64		nr_changes;			/* # of passes in pg_decode_change() */
 									/* FIXME replace with txn->nentries */
+
+	int		    socket_port;	        /* port FIXME */
+	char		*socket_ip;	            /* ip */
+
 } JsonDecodingData;
 
 typedef struct SelectTable
@@ -348,6 +352,23 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 				pfree(rawstr);
 			}
 		}
+		//myupdate
+		else if (strcmp(elem->defname, "socket-ip") == 0)
+        {
+        	data->socket-ip = strVal(elem->arg);
+        }
+        else if (strcmp(elem->defname, "socket-port") == 0)
+        {
+            if (elem->arg == NULL)
+            {
+            	elog(LOG, "socket-port argument is null");
+            }
+            else if (!parse_int(strVal(elem->arg), &data->socket_port))
+            	ereport(ERROR,
+            			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+            			 errmsg("could not parse value \"%s\" for parameter \"%s\"",
+            				 strVal(elem->arg), elem->defname)));
+        }
 		else
 		{
 			ereport(ERROR,
@@ -760,18 +781,20 @@ send_by_socket(LogicalDecodingContext *ctx)
     struct sockaddr_in dest_addr;
     char	   *buf;
 
+    JsonDecodingData *data = ctx->output_plugin_private;
+
     dest_addr.sin_family=AF_INET;
     //   fixme 参数从sql语句配入 ，检查参数是否正常，如果缺失则直接  （测试return是否可以进行中断）
-    dest_addr.sin_port=htons(1500);
-    dest_addr.sin_addr.s_addr=inet_addr("172.29.0.145");
+    dest_addr.sin_port=htons(data->socket_port);
+    dest_addr.sin_addr.s_addr=inet_addr(data->socket_ip);
     bzero(&(dest_addr.sin_zero),8);
 
     sockfd = socket(AF_INET,SOCK_STREAM,0);
 
     // 一直到发送成功为止
-    while(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1);
+    while(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
         elog(WARNING, "connect failed for \"%s\" ,errono: \"%d\"", strerror(errno) , errno);
-
+    }
     //传输值内容
     buf = ctx->out->data;
 
@@ -1068,10 +1091,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextReset(data->context);
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
-    send_by_socket(ctx);
+    if (data->socket_port != NULL && data->socket_ip !=NULL){
 
-    initStringInfo(ctx->out);
-    appendStringInfoString(ctx->out, "success");
+        send_by_socket(ctx);
+        initStringInfo(ctx->out);
+        appendStringInfoString(ctx->out, "success");
+    }
 
 	OutputPluginWrite(ctx, true);
 }
