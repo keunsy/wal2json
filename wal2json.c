@@ -759,25 +759,31 @@ send_by_socket(LogicalDecodingContext *ctx)
 	int sockfd;
     struct sockaddr_in dest_addr;
     char	   *buf;
-    buf = ctx->out->data;
-    sockfd=socket(AF_INET,SOCK_STREAM,0);
-    if(sockfd==-1){
-//        fixme 日志级别需要修改
-        elog(WARNING, "socket failed\"%d\"", errno);
-    }
+
     dest_addr.sin_family=AF_INET;
     //   fixme 参数从sql语句配入 ，检查参数是否正常，如果缺失则直接  （测试return是否可以进行中断）
     dest_addr.sin_port=htons(1500);
     dest_addr.sin_addr.s_addr=inet_addr("172.29.0.145");
     bzero(&(dest_addr.sin_zero),8);
 
-    //   fixme 一直到发送成功为止，并接受返回值，防止消费失败
-    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1){
-        elog(WARNING, "connect failed\"%d\"", errno);
-    } else{
-        elog(WARNING, "connect success ,start send msg");
-        send(sockfd,buf,strlen(buf),0);
+    sockfd = socket(AF_INET,SOCK_STREAM,0);
+
+    // 一直到发送成功为止
+    while(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr))==-1);
+        elog(WARNING, "connect failed for \"%s\" ,errono: \"%d\"", strerror(errno) , errno);
+
+    //传输值内容
+    buf = ctx->out->data;
+
+    // fixme 修改日志级别
+    elog(WARNING, "connect success ,start send msg");
+
+    //发送失败
+    while(send(sockfd,buf,strlen(buf),0)) < 0){
+         elog(WARNING, "send failed for \"%s\" ,errono: \"%d\"", strerror(errno) , errno);
     }
+    // fixme 接收返回值
+
     close(sockfd);
 }
 
