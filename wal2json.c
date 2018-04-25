@@ -141,7 +141,6 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 
     //myupdate
 	data->socket_port = 0;
-	data->socket_ip = NIL;
 
 	/* add all tables in all schemas by default */
 	t = palloc0(sizeof(SelectTable));
@@ -359,14 +358,14 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 		//myupdate
 		else if (strcmp(elem->defname, "socket-ip") == 0)
         {
-        	data->socket-ip = strVal(elem->arg);
+        	data->socket_ip = strVal(elem->arg);
         }
         else if (strcmp(elem->defname, "socket-port") == 0)
         {
             if (elem->arg == NULL)
             {
             	elog(LOG, "socket-port argument is null");
-            	data->socket-port = 0;
+            	data->socket_port = 0;
             }
             else if (!parse_int(strVal(elem->arg), &data->socket_port))
             	ereport(ERROR,
