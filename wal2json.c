@@ -21,6 +21,7 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 PG_MODULE_MAGIC;
 
@@ -367,13 +368,26 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
             if (elem->arg == NULL)
             {
             	elog(LOG, "socket-port argument is null");
-            	data->socket_port = 0;
             }
-            else if (!parse_int(strVal(elem->arg), 0, 0 ,&data->socket_port))
-            	ereport(ERROR,
-            			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-            			 errmsg("could not parse value \"%s\" for parameter \"%s\"",
-            				 strVal(elem->arg), elem->defname)));
+            else if ( atoi(strVal(elem->arg)) <= 0)
+            {
+                        	ereport(ERROR,
+                        			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                        			 errmsg("could not parse value \"%s\" for parameter \"%s\"",
+                        				 strVal(elem->arg), elem->defname)));
+
+            }
+            else
+            {
+                data->socket_port = atoi(strVal(elem->arg);
+            }
+//            else if (!parse_int(strVal(elem->arg),&data->socket_port))
+//
+//
+//            	ereport(ERROR,
+//            			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+//            			 errmsg("could not parse value \"%s\" for parameter \"%s\"",
+//            				 strVal(elem->arg), elem->defname)));
         }
 		else
 		{
@@ -1006,8 +1020,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
         pfree(lsn_str);
     }
-    appendStringInfo(ctx->out, "\"total_num\":\"%u\",", txn->nentries);
-    appendStringInfo(ctx->out, "\"current_num\":\"%u\",", data->nr_changes);
+    appendStringInfo(ctx->out, "\"total_num\":\"%lu\",", txn->nentries);
+    appendStringInfo(ctx->out, "\"current_num\":\"%lu\",", data->nr_changes);
 
 
 	/* Print table name (possibly) qualified */
