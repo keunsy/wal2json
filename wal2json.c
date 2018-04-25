@@ -369,7 +369,7 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
             {
             	elog(LOG, "socket-port argument is null");
             }
-            else if ( atoi(strVal(elem->arg)) <= 0)
+            else if ( atoi(strVal(elem->arg)) <= 0))
             {
                         	ereport(ERROR,
                         			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
