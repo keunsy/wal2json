@@ -1015,9 +1015,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     }
 
 //    todo 加入dbname  加入topic name
-     elog(WARNING, "slot name  \"%s\"", NameStr(ctx->slot->data->name));
+     elog(WARNING, "slot name  \"%s\"", NameStr(ctx->slot->data.name));
 
-     elog(WARNING, "database name  \"%s\"", get_namespace_name(ctx->slot->data->database));
+     elog(WARNING, "database name  \"%s\"", get_namespace_name(ctx->slot->data.database));
 
 
     appendStringInfo(ctx->out, "\"current_num\":\"%lu\",", data->nr_changes);
