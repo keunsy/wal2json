@@ -808,7 +808,7 @@ send_by_socket(LogicalDecodingContext *ctx)
     }
     //传输值内容
     buf = ctx->out->data;
-    // fixme 修改日志级别
+
     elog(DEBUG2, "connect success ,start send msg");
     //发送失败
     while(send(sockfd,buf,strlen(buf),0) < 0){
@@ -1013,8 +1013,15 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
         pfree(lsn_str);
     }
-    appendStringInfo(ctx->out, "\"total_num\":\"%lu\",", txn->nentries);
+
+//    todo 加入dbname  加入topic name
+     elog(WARNING, "slot name  \"%s\"", NameStr(ctx->slot->data->name));
+
+     elog(WARNING, "database name  \"%s\"", get_namespace_name(ctx->slot->data->database));
+
+
     appendStringInfo(ctx->out, "\"current_num\":\"%lu\",", data->nr_changes);
+    appendStringInfo(ctx->out, "\"total_num\":\"%lu\",", txn->nentries);
 
 
 	/* Print table name (possibly) qualified */
