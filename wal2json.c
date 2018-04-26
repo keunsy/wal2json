@@ -55,8 +55,11 @@ typedef struct
 	uint64		nr_changes;			/* # of passes in pg_decode_change() */
 									/* FIXME replace with txn->nentries */
 
-	int		    socket_port;	        /* port FIXME */
+    /* required start */
+	int		    socket_port;	        /* port */
 	char		*socket_ip;	            /* ip */
+	char		*topic;	                /* topic for devide msg */
+    /* required end */
 
 } JsonDecodingData;
 
@@ -359,15 +362,33 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 			}
 		}
 		//myupdate
+		else if (strcmp(elem->defname, "topic") == 0)
+        {
+             if (elem->arg == NULL)
+             {
+             	ereport(ERROR,
+                     (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                          errmsg("parameter \"%s\" could not be null", elem->defname)));
+             }
+             data->topic = strVal(elem->arg);
+        }
 		else if (strcmp(elem->defname, "socket-ip") == 0)
         {
+             if (elem->arg == NULL)
+             {
+             	ereport(ERROR,
+                     (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                          errmsg("parameter \"%s\" could not be null", elem->defname)));
+             }
         	data->socket_ip = strVal(elem->arg);
         }
         else if (strcmp(elem->defname, "socket-port") == 0)
         {
             if (elem->arg == NULL)
             {
-            	elog(LOG, "socket-port argument is null");
+            	ereport(ERROR,
+                    (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                         errmsg("parameter \"%s\" could not be null", elem->defname)));
             }
             else if ( atoi(strVal(elem->arg)) <= 0)
             {
@@ -580,7 +601,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		/* Skip nulls iif printing key/identity */
 
-		//fixme
+		//fixme 不进行continue 反而比较快？why？
 //		if (isnull && replident)
 //			continue;
 
@@ -1016,10 +1037,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         pfree(lsn_str);
     }
 
-
+    appendStringInfo(ctx->out, "\"topic\":\"%s\",", data->topic);
     appendStringInfo(ctx->out, "\"slot_name\":\"%s\",", NameStr(ctx->slot->data.name));
     appendStringInfo(ctx->out, "\"current_num\":\"%lu\",", data->nr_changes);
     appendStringInfo(ctx->out, "\"total_num\":\"%lu\",", txn->nentries);
+
+
 
 
 	/* Print table name (possibly) qualified */
