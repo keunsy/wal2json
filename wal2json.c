@@ -364,31 +364,18 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 		//myupdate
 		else if (strcmp(elem->defname, "topic") == 0)
         {
-             if (elem->arg == NULL)
-             {
-             	ereport(ERROR,
-                     (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-                          errmsg("parameter \"%s\" could not be null", elem->defname)));
-             }
              data->topic = strVal(elem->arg);
         }
 		else if (strcmp(elem->defname, "socket-ip") == 0)
         {
-             if (elem->arg == NULL)
-             {
-             	ereport(ERROR,
-                     (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-                          errmsg("parameter \"%s\" could not be null", elem->defname)));
-             }
         	data->socket_ip = strVal(elem->arg);
         }
         else if (strcmp(elem->defname, "socket-port") == 0)
         {
             if (elem->arg == NULL)
             {
-            	ereport(ERROR,
-                    (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-                         errmsg("parameter \"%s\" could not be null", elem->defname)));
+            	elog(LOG, "socket-port argument is null");
+            	data->socket_port = 0;
             }
             else if ( atoi(strVal(elem->arg)) <= 0)
             {
@@ -411,6 +398,23 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 						elem->defname,
 						elem->arg ? strVal(elem->arg) : "(null)")));
 		}
+	}
+
+
+	if(data->topic == NULL ){
+	    ereport(ERROR,
+        		(errcode(ERRCODE_INVALID_NAME),
+        		 errmsg("option \"%s\" is required","topic")));
+	}
+	if(data->socket_ip == NULL ){
+	    ereport(ERROR,
+        		(errcode(ERRCODE_INVALID_NAME),
+        		 errmsg("option \"%s\" is required","socket-ip")));
+	}
+	if(data->socket_port == NULL || data->socket_port == 0 ){
+	    ereport(ERROR,
+        		(errcode(ERRCODE_INVALID_NAME),
+        		 errmsg("option \"%s\" is required","socket-port")));
 	}
 }
 
