@@ -411,7 +411,7 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
         		(errcode(ERRCODE_INVALID_NAME),
         		 errmsg("option \"%s\" is required","socket-ip")));
 	}
-	if(data->socket_port == NULL || data->socket_port == 0 ){
+	if(data->socket_port == 0 ){
 	    ereport(ERROR,
         		(errcode(ERRCODE_INVALID_NAME),
         		 errmsg("option \"%s\" is required","socket-port")));
