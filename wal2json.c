@@ -579,8 +579,10 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 
 		/* Skip nulls iif printing key/identity */
-		if (isnull && replident)
-			continue;
+
+		//fixme
+//		if (isnull && replident)
+//			continue;
 
 		if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval) && !data->include_unchanged_toast)
 		{
@@ -1100,9 +1102,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 //			{
 //				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
 //			}
-            columns_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, false);
+//            columns_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, false);
 
-//			identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
+			identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
 
 
 
