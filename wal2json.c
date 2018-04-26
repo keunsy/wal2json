@@ -1091,22 +1091,17 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			break;
 		case REORDER_BUFFER_CHANGE_DELETE:
 			/* Print the replica identity */
-//			indexrel = RelationIdGetRelation(relation->rd_replidindex);
-//			if (indexrel != NULL)
-//			{
-//				indexdesc = RelationGetDescr(indexrel);
-//				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, indexdesc);
-//				RelationClose(indexrel);
-//			}
-//			else
-//			{
-//				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
-//			}
-//            columns_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, false);
-
-			identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
-
-
+			indexrel = RelationIdGetRelation(relation->rd_replidindex);
+			if (indexrel != NULL)
+			{
+				indexdesc = RelationGetDescr(indexrel);
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, indexdesc);
+				RelationClose(indexrel);
+			}
+			else
+			{
+				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
+			}
 
 			if (change->data.tp.oldtuple == NULL)
 				elog(DEBUG1, "old tuple is null");
