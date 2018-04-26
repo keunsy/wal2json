@@ -1100,8 +1100,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 //			{
 //				identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
 //			}
+            columns_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, false);
 
-			identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
+//			identity_to_stringinfo(ctx, tupdesc, &change->data.tp.oldtuple->tuple, NULL);
 
 
 
