@@ -831,7 +831,7 @@ send_by_socket(LogicalDecodingContext *ctx)
     sockfd = socket(AF_INET,SOCK_STREAM,0);
     // 一直到发送成功为止
     while(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
-        elog(WARNING, "connect [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
+        elog(ERROR, "connect [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
     }
     //传输值内容
     buf = ctx->out->data;
@@ -839,7 +839,7 @@ send_by_socket(LogicalDecodingContext *ctx)
     elog(DEBUG2, "connect success ,start send msg");
     //发送失败
     while(send(sockfd,buf,strlen(buf),0) < 0){
-         elog(WARNING, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
+         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
     }
     // fixme 接收返回值
 
