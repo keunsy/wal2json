@@ -472,7 +472,6 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
 
     if(data->use_socket){
-        initStringInfo(ctx->out);
         appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
     }
     OutputPluginWrite(ctx, true);
@@ -868,9 +867,10 @@ send_by_socket(LogicalDecodingContext *ctx)
          elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
     }
     // fixme 接收返回值
-    //清空 防止多次消费
-    initStringInfo(ctx->out);
     close(sockfd);
+
+    //清空
+    initStringInfo(ctx->out);
 }
 
 
@@ -1176,6 +1176,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->use_socket && data->socket_port != 0 && data->socket_ip !=NULL){
+
+         //fixme
+        elog(WARNING, "%lu",data->nr_changes++ );
         send_by_socket(ctx);
     }
 }
