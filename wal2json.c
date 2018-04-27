@@ -861,15 +861,11 @@ send_by_socket(LogicalDecodingContext *ctx)
     //传输值内容
     buf = ctx->out->data;
 
-//       fixme
-    elog(WARNING, "connect success ,start send msg");
-
     elog(DEBUG2, "connect success ,start send msg");
     //发送失败
     while(send(sockfd,buf,strlen(buf),0) < 0){
          elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
     }
-    // fixme 接收返回值
     close(sockfd);
 
     //清空
@@ -1180,8 +1176,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->use_socket && data->socket_port != 0 && data->socket_ip !=NULL){
 
-         //fixme
-        elog(WARNING, "%lu",data->nr_changes );
         send_by_socket(ctx);
     }
 }
