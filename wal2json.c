@@ -1065,7 +1065,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         pfree(lsn_str);
     }
 
-    if(data->topic != NULL){
+    if(use_socket){
         appendStringInfo(ctx->out, "\"topic\":\"%s\",", data->topic);
     }
     appendStringInfo(ctx->out, "\"slot_name\":\"%s\",", NameStr(ctx->slot->data.name));
