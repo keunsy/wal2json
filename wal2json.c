@@ -866,9 +866,15 @@ send_by_socket(LogicalDecodingContext *ctx)
     result ="0";
 
     //发送并获取返回值 知道成功为止
-    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,1,0) < 0 ||  strcmp(result,"1") != 0){
-         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
+//    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,1,0) < 0 ||  strcmp(result,"1") != 0){
+//         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
+//    }
+    while(send(sockfd,buf,strlen(buf),0) < 0 ){
+             elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
     }
+    recv(sockfd,result,1,0);
+    elog(WARNING,"restult is %s",result)
+
     close(sockfd);
 
     //清空
