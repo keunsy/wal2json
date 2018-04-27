@@ -861,6 +861,9 @@ send_by_socket(LogicalDecodingContext *ctx)
     //传输值内容
     buf = ctx->out->data;
 
+//       fixme
+    elog(WARNING, "connect success ,start send msg");
+
     elog(DEBUG2, "connect success ,start send msg");
     //发送失败
     while(send(sockfd,buf,strlen(buf),0) < 0){
@@ -1178,7 +1181,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     if (data->use_socket && data->socket_port != 0 && data->socket_ip !=NULL){
 
          //fixme
-        elog(WARNING, "%lu",data->nr_changes++ );
+        elog(WARNING, "%lu",data->nr_changes );
         send_by_socket(ctx);
     }
 }
