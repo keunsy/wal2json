@@ -435,6 +435,8 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 	JsonDecodingData *data = ctx->output_plugin_private;
 
 	data->nr_changes = 0;
+
+    OutputPluginPrepareWrite(ctx, true);
 }
 
 /* COMMIT callback */
@@ -450,6 +452,11 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 		elog(DEBUG1, "txn has catalog changes: no");
 	elog(DEBUG1, "my change counter: %lu ; # of changes: %lu ; # of changes in memory: %lu", data->nr_changes, txn->nentries, txn->nentries_mem);
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
+
+	initStringInfo(ctx->out);
+    appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
+
+    OutputPluginWrite(ctx, true);
 
 }
 
@@ -877,8 +884,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	tablename = NameStr(class_form->relname);
 
 
-	OutputPluginPrepareWrite(ctx, true);
-
 	/* Make sure rd_replidindex is set */
 	RelationGetIndexList(relation);
 
@@ -1149,13 +1154,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip !=NULL){
-
         send_by_socket(ctx);
-        initStringInfo(ctx->out);
-        appendStringInfoString(ctx->out, "success");
     }
-
-	OutputPluginWrite(ctx, true);
 }
 
 #if	PG_VERSION_NUM >= 90600
@@ -1178,8 +1178,9 @@ pg_decode_message(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	 * write immediately iif (i) write-in-chunks=1 or (ii) non-transactional
 	 * messages.
 	 */
-	if (data->write_in_chunks || !transactional)
-		OutputPluginPrepareWrite(ctx, true);
+	// 屏蔽，几乎不用调用此方法
+//	if (data->write_in_chunks || !transactional)
+//		OutputPluginPrepareWrite(ctx, true);
 
 	/*
 	 * increment counter only for transactional messages because
@@ -1276,8 +1277,8 @@ pg_decode_message(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
 
-	if (data->write_in_chunks || !transactional)
-		OutputPluginWrite(ctx, true);
+//	if (data->write_in_chunks || !transactional)
+//		OutputPluginWrite(ctx, true);
 }
 #endif
 
