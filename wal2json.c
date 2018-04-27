@@ -114,7 +114,7 @@ _PG_output_plugin_init(OutputPluginCallbacks *cb)
 #endif
 }
 
-/* Initialize this plugin  创建slot时也会调用*/
+/* Initialize this plugin  创建slot以及查询时会调用*/
 static void
 pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is_init)
 {
@@ -868,7 +868,8 @@ send_by_socket(LogicalDecodingContext *ctx)
          elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
     }
     // fixme 接收返回值
-
+    //清空 防止多次消费
+    initStringInfo(ctx->out);
     close(sockfd);
 }
 
