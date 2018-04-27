@@ -845,6 +845,7 @@ send_by_socket(LogicalDecodingContext *ctx)
 	int sockfd;
     struct sockaddr_in dest_addr;
     char	   *buf;
+    char	   *result;
 
     JsonDecodingData *data = ctx->output_plugin_private;
 
@@ -862,9 +863,10 @@ send_by_socket(LogicalDecodingContext *ctx)
     buf = ctx->out->data;
 
     elog(DEBUG2, "connect success ,start send msg");
-    //发送失败
-    while(send(sockfd,buf,strlen(buf),0) < 0){
-         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
+
+    //发送并获取返回值 知道成功为止
+    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,strlen("success"),0) < 0 ||  strcmp(result,"success") != 0){
+         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
     }
     close(sockfd);
 
