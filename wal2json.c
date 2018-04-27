@@ -55,10 +55,11 @@ typedef struct
 	uint64		nr_changes;			/* # of passes in pg_decode_change() */
 									/* FIXME replace with txn->nentries */
 
+	bool		use_socket;	        /*directly return result or by socket ,default for true*/
     /* required start */
-	int		    socket_port;	        /* port */
-	char		*socket_ip;	            /* ip */
-	char		*topic;	                /* topic for devide msg */
+	int		    socket_port;	    /*socket connect server port */
+	char		*socket_ip;	        /*socket connect server ip */
+	char		*topic;	            /*message group by*/
     /* required end */
 
 } JsonDecodingData;
@@ -147,6 +148,7 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 
     //myupdate
 	data->socket_port = 0;
+	data->use_socket = true;
 
 	/* add all tables in all schemas by default */
 	t = palloc0(sizeof(SelectTable));
@@ -390,6 +392,19 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
                 data->socket_port = atoi(strVal(elem->arg));
             }
         }
+        else if (strcmp(elem->defname, "use-socket") == 0)
+        		{
+        			if (elem->arg == NULL)
+        			{
+        				elog(LOG, "use-socket argument is null");
+        				data->use_socket = true;
+        			}
+        			else if (!parse_bool(strVal(elem->arg), &data->use_socket))
+        				ereport(ERROR,
+        						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+        						 errmsg("could not parse value \"%s\" for parameter \"%s\"",
+        							 strVal(elem->arg), elem->defname)));
+        		}
 		else
 		{
 			ereport(ERROR,
@@ -401,21 +416,23 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 	}
 
 
-	if(data->topic == NULL ){
-	    ereport(ERROR,
-        		(errcode(ERRCODE_INVALID_NAME),
-        		 errmsg("option \"%s\" is required","topic")));
-	}
-	if(data->socket_ip == NULL ){
-	    ereport(ERROR,
-        		(errcode(ERRCODE_INVALID_NAME),
-        		 errmsg("option \"%s\" is required","socket-ip")));
-	}
-	if(data->socket_port == 0 ){
-	    ereport(ERROR,
-        		(errcode(ERRCODE_INVALID_NAME),
-        		 errmsg("option \"%s\" is required","socket-port")));
-	}
+    if(data->use_socket){
+        if(data->topic == NULL ){
+            ereport(ERROR,
+                    (errcode(ERRCODE_INVALID_NAME),
+                     errmsg("option \"%s\" is required","topic")));
+        }
+        if(data->socket_ip == NULL ){
+            ereport(ERROR,
+                    (errcode(ERRCODE_INVALID_NAME),
+                     errmsg("option \"%s\" is required","socket-ip")));
+        }
+        if(data->socket_port == 0 ){
+            ereport(ERROR,
+                    (errcode(ERRCODE_INVALID_NAME),
+                     errmsg("option \"%s\" is required","socket-port")));
+        }
+    }
 }
 
 /* cleanup this plugin's resources */
@@ -453,9 +470,10 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	elog(DEBUG1, "my change counter: %lu ; # of changes: %lu ; # of changes in memory: %lu", data->nr_changes, txn->nentries, txn->nentries_mem);
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
 
-	initStringInfo(ctx->out);
-    appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
-
+    if(data->use_socket){
+        initStringInfo(ctx->out);
+        appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
+    }
     OutputPluginWrite(ctx, true);
 
 }
@@ -1046,12 +1064,14 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         pfree(lsn_str);
     }
 
-    appendStringInfo(ctx->out, "\"topic\":\"%s\",", data->topic);
+    if(data->topic != NULL){
+        appendStringInfo(ctx->out, "\"topic\":\"%s\",", data->topic);
+    }
     appendStringInfo(ctx->out, "\"slot_name\":\"%s\",", NameStr(ctx->slot->data.name));
+
+    //可能是串行执行 导致 重复
     appendStringInfo(ctx->out, "\"current_num\":\"%lu\",", data->nr_changes);
     appendStringInfo(ctx->out, "\"total_num\":\"%lu\",", txn->nentries);
-
-
 
 
 	/* Print table name (possibly) qualified */
@@ -1153,7 +1173,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextReset(data->context);
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
-    if (data->socket_port != 0 && data->socket_ip !=NULL){
+    if (data->use_socket && data->socket_port != 0 && data->socket_ip !=NULL){
         send_by_socket(ctx);
     }
 }
