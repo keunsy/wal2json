@@ -114,7 +114,7 @@ _PG_output_plugin_init(OutputPluginCallbacks *cb)
 #endif
 }
 
-/* Initialize this plugin */
+/* Initialize this plugin  创建slot时也会调用*/
 static void
 pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is_init)
 {
@@ -415,6 +415,24 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 		}
 	}
 
+}
+
+/* cleanup this plugin's resources */
+static void
+pg_decode_shutdown(LogicalDecodingContext *ctx)
+{
+	JsonDecodingData *data = ctx->output_plugin_private;
+
+	/* cleanup our own resources via memory context reset */
+	MemoryContextDelete(data->context);
+}
+
+/* BEGIN callback */
+static void
+pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
+{
+
+	JsonDecodingData *data = ctx->output_plugin_private;
 
     if(data->use_socket){
         if(data->topic == NULL ){
@@ -433,23 +451,6 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
                      errmsg("option \"%s\" is required","socket-port")));
         }
     }
-}
-
-/* cleanup this plugin's resources */
-static void
-pg_decode_shutdown(LogicalDecodingContext *ctx)
-{
-	JsonDecodingData *data = ctx->output_plugin_private;
-
-	/* cleanup our own resources via memory context reset */
-	MemoryContextDelete(data->context);
-}
-
-/* BEGIN callback */
-static void
-pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
-{
-	JsonDecodingData *data = ctx->output_plugin_private;
 
 	data->nr_changes = 0;
 
