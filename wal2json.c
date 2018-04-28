@@ -865,7 +865,7 @@ send_by_socket(LogicalDecodingContext *ctx)
     elog(DEBUG2, "connect success ,start send msg");
 
     if(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  strcmp(result,"1") != 0){
-         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
+         elog(WARNING, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
          close(sockfd);
          pfree(buf);
          return 0;
