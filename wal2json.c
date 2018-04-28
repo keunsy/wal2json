@@ -867,7 +867,7 @@ send_by_socket(LogicalDecodingContext *ctx)
     //发送并获取返回值 知道成功为止
 //    result = "0";
 
-    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  result[0] == '1'{
+    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  result[0] == '1'){
          elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
     }
 //    while(send(sockfd,buf,strlen(buf),0) < 0 ){
