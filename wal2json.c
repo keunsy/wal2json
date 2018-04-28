@@ -839,7 +839,7 @@ identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple
 }
 
 //myupdate 发送socket
-static void
+static int
 send_by_socket(LogicalDecodingContext *ctx)
 {
 	int sockfd;
@@ -864,30 +864,19 @@ send_by_socket(LogicalDecodingContext *ctx)
 
     elog(DEBUG2, "connect success ,start send msg");
 
-    //发送并获取返回值 知道成功为止
-//    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  strcmp(result,"1") != 0){
-//         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
-//    }
-    while(1){
-        if(send(sockfd,buf,strlen(buf),0) < 0){
-            elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
-            continue;
-        }
-        if(recv(sockfd,result,sizeof(result),0) < 0 ){
-            elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
-            continue;
-        }
-        if( strcmp(result,"1") != 0){
-            continue;
-        }
-        break;
+    if(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  strcmp(result,"1") != 0){
+         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
+         close(sockfd);
+         pfree(buf);
+         return 0;
     }
 
     close(sockfd);
-
     pfree(buf);
     //清空
     initStringInfo(ctx->out);
+
+    return 1;
 }
 
 
@@ -1194,7 +1183,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->use_socket && data->socket_port != 0 && data->socket_ip !=NULL){
 
-        send_by_socket(ctx);
+        while(send_by_socket(ctx) == 0);
     }
 }
 
