@@ -871,16 +871,16 @@ send_by_socket(LogicalDecodingContext *ctx)
     while(1){
         if(send(sockfd,buf,strlen(buf),0) < 0){
             elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
-            continue
+            continue;
         }
         if(recv(sockfd,result,sizeof(result),0) < 0 ){
             elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
-            continue
+            continue;
         }
         if( strcmp(result,"1") != 0){
-            continue
+            continue;
         }
-        break
+        break;
     }
 
     close(sockfd);
