@@ -845,7 +845,7 @@ send_by_socket(LogicalDecodingContext *ctx)
 	int sockfd;
     struct sockaddr_in dest_addr;
     char	   *buf;
-    char	   result[1];
+    char	   *result;
 
     JsonDecodingData *data = ctx->output_plugin_private;
 
@@ -865,16 +865,17 @@ send_by_socket(LogicalDecodingContext *ctx)
     elog(DEBUG2, "connect success ,start send msg");
 
     //发送并获取返回值 知道成功为止
-//    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,1,0) < 0 ||  strcmp(result,"1") != 0){
-//         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
-//    }
-    while(send(sockfd,buf,strlen(buf),0) < 0 ){
-             elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
+    result = "0";
+
+    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,1,0) < 0 ||  strcmp(result,"1") != 0){
+         elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
     }
+//    while(send(sockfd,buf,strlen(buf),0) < 0 ){
+//             elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
+//    }
 
 //    int recv_size = recv(sockfd,result,sizeof(result),0);
 //    elog(WARNING,"restult is %s ,recv_size is %d",result,recv_size);
-
     close(sockfd);
 
     pfree(buf);
