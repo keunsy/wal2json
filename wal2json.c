@@ -1183,7 +1183,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->use_socket && data->socket_port != 0 && data->socket_ip !=NULL){
 
-        while(send_by_socket(ctx) == 0);
+        while(send_by_socket(ctx) != 1);
     }
 }
 
