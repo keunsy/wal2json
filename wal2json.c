@@ -840,11 +840,10 @@ identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple
 
 //myupdate 发送socket
 static int
-send_by_socket(LogicalDecodingContext *ctx)
+send_by_socket(LogicalDecodingContext *ctx ,char *buf)
 {
 	int sockfd;
     struct sockaddr_in dest_addr;
-    char	   *buf;
     char	   result[1];
 
     JsonDecodingData *data = ctx->output_plugin_private;
@@ -859,20 +858,16 @@ send_by_socket(LogicalDecodingContext *ctx)
     while(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
         elog(ERROR, "connect [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
     }
-    //传输值内容
-    buf = ctx->out->data;
 
     elog(DEBUG2, "connect success ,start send msg");
 
     if(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  strcmp(result,"1") != 0){
          elog(WARNING, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
          close(sockfd);
-         pfree(buf);
          return 0;
     }
 
     close(sockfd);
-    pfree(buf);
     //清空
     initStringInfo(ctx->out);
 
@@ -1183,7 +1178,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->use_socket && data->socket_port != 0 && data->socket_ip !=NULL){
 
-        while(send_by_socket(ctx) != 1);
+    //传输值内容
+        while(send_by_socket(ctx , ctx->out->data) != 1);
     }
 }
 
