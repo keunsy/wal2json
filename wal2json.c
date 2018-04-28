@@ -845,7 +845,7 @@ send_by_socket(LogicalDecodingContext *ctx)
 	int sockfd;
     struct sockaddr_in dest_addr;
     char	   *buf;
-    char	   *result;
+    char	   result[1];
 
     JsonDecodingData *data = ctx->output_plugin_private;
 
@@ -874,7 +874,7 @@ send_by_socket(LogicalDecodingContext *ctx)
              elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
     }
 
-    int recv_size = recv(sockfd,result,strlen(result),0);
+    int recv_size = recv(sockfd,result,sizeof(result),0);
     elog(WARNING,"restult is %s ,recv_size is %d",result,recv_size);
     close(sockfd);
 
