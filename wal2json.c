@@ -865,17 +865,9 @@ send_by_socket(LogicalDecodingContext *ctx)
     elog(DEBUG2, "connect success ,start send msg");
 
     //发送并获取返回值 知道成功为止
-//    result = "0";
-
-    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  result !='1'){
+    while(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  result !="1"){
          elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
     }
-//    while(send(sockfd,buf,strlen(buf),0) < 0 ){
-//             elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
-//    }
-
-//    int recv_size = recv(sockfd,result,sizeof(result),0);
-//    elog(WARNING,"restult is %s ,recv_size is %d",result,recv_size);
     close(sockfd);
 
     pfree(buf);
