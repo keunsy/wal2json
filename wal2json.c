@@ -877,8 +877,7 @@ send_by_socket(LogicalDecodingContext *ctx)
 
     close(sockfd);
 
-//    pfree(buf);
-//    pfree(result);
+    pfree(buf);
     //清空
     initStringInfo(ctx->out);
 }
