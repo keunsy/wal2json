@@ -873,8 +873,8 @@ send_by_socket(LogicalDecodingContext *ctx)
              elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
     }
 
-//    recv(sockfd,result,100,0);
-//    elog(WARNING,"restult is %s",result);
+    recv(sockfd,result,100,0);
+    elog(WARNING,"restult is %s",result);
 
     close(sockfd);
 
