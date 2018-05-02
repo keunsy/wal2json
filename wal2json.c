@@ -62,6 +62,8 @@ typedef struct
 	char		*topic;	            /*message group by*/
     /* required end */
 
+    bool		is_data_change;			/* 数据是否进行了变更 */
+
 } JsonDecodingData;
 
 typedef struct SelectTable
@@ -454,6 +456,7 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 
 	data->nr_changes = 0;
 
+	data->is_data_change = false;
 
 }
 
@@ -470,6 +473,17 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 		elog(DEBUG1, "txn has catalog changes: no");
 	elog(DEBUG1, "my change counter: %lu ; # of changes: %lu ; # of changes in memory: %lu", data->nr_changes, txn->nentries, txn->nentries_mem);
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
+
+//    fixme dml的情况下 数据异常，因此需要进行过滤
+    if(!is_data_change){
+        return;
+    }
+
+    OutputPluginPrepareWrite(ctx, true);
+    if(data->use_socket ){
+        appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
+    }
+    OutputPluginWrite(ctx, true);
 
 }
 
@@ -1020,6 +1034,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	/* Change counter */
 	data->nr_changes++;
 
+	data->is_data_change = true;
+
 	/* Change starts */
 	appendStringInfoCharMacro(ctx->out, '{');
 
@@ -1178,13 +1194,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     //传输值内容
         while(send_by_socket(ctx , ctx->out->data) != 1);
     }
-
-    //DML语句在事物commit方法中会调用，因此调换至此处进行输出 fixme 待测试
-    OutputPluginPrepareWrite(ctx, true);
-    if(data->use_socket){
-        appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
-    }
-    OutputPluginWrite(ctx, true);
 }
 
 #if	PG_VERSION_NUM >= 90600
