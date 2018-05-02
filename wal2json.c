@@ -639,7 +639,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
 		/* Skip nulls iif printing key/identity */
 
-		//fixme 不进行continue 反而比较快？why？
+		//不进行continue 反而比较快？
 //		if (isnull && replident)
 //			continue;
 
@@ -855,6 +855,9 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     struct sockaddr_in dest_addr;
     char	   result[1];
 
+//         fixme 注意日志级别 如果是error 是否会中断
+    elog(ERROR, "send fsfe");
+
     JsonDecodingData *data = ctx->output_plugin_private;
 
     dest_addr.sin_family=AF_INET;
@@ -872,7 +875,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     elog(DEBUG2, "connect success ,start send msg");
 
     if(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  strcmp(result,"1") != 0){
-//         fixme 注意日志级别 如果是error 是否会中断
+
          elog(ERROR, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
          close(sockfd);
          return 0;
