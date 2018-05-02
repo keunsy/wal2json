@@ -454,7 +454,7 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 
 	data->nr_changes = 0;
 
-    OutputPluginPrepareWrite(ctx, true);
+
 }
 
 /* COMMIT callback */
@@ -470,11 +470,6 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 		elog(DEBUG1, "txn has catalog changes: no");
 	elog(DEBUG1, "my change counter: %lu ; # of changes: %lu ; # of changes in memory: %lu", data->nr_changes, txn->nentries, txn->nentries_mem);
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
-
-    if(data->use_socket){
-        appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
-    }
-    OutputPluginWrite(ctx, true);
 
 }
 
@@ -1183,6 +1178,13 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     //传输值内容
         while(send_by_socket(ctx , ctx->out->data) != 1);
     }
+
+    //DML语句在事物commit方法中会调用，因此调换至此处进行输出 fixme 待测试
+    OutputPluginPrepareWrite(ctx, true);
+    if(data->use_socket){
+        appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
+    }
+    OutputPluginWrite(ctx, true);
 }
 
 #if	PG_VERSION_NUM >= 90600
