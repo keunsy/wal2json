@@ -475,7 +475,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
 
 //    fixme dml的情况下 数据异常，因此需要进行过滤
-    if(!is_data_change){
+    if(!data->is_data_change){
         return;
     }
 
