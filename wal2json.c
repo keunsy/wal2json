@@ -863,7 +863,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     bzero(&(dest_addr.sin_zero),8);
 
     sockfd = socket(AF_INET,SOCK_STREAM,0);
-    // 一直到成功为止
+
     if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
         elog(WARNING, "connect [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
         return 0;
@@ -872,7 +872,6 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     elog(DEBUG2, "connect success ,start send msg");
 
     if(send(sockfd,buf,strlen(buf),0) < 0  || recv(sockfd,result,sizeof(result),0) < 0 ||  strcmp(result,"1") != 0){
-
          // 如果是error级别 将直接中断
          elog(WARNING, "send [\"%s\",\"%d\"] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
          close(sockfd);
