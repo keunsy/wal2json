@@ -643,7 +643,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 //		if (isnull && replident)
 //			continue;
 
-		if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval) && !data->include_unchanged_toast)
+		if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval))
 		{
 			/* TOAST value is not returned if include-unchanged-toast is specified */
 			elog(DEBUG2, "column \"%s\" has an unchanged TOAST - excluding", NameStr(attr->attname));
