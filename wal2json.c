@@ -47,8 +47,9 @@ typedef struct
 	 */
 	bool		include_lsn;		/* include LSNs */
 
-	char		*payload;	            /*透传信息*/
-	char		*receiver;	            /*socket服务端ip端口 如：192.168.0.177:8080*/
+	char		*payload;	        /*透传信息*/
+	char		*receiver;	        /*socket服务端ip端口 如：192.168.0.177:8080*/
+	int		    batch_size;	        /*批量发送的数据*/
 
 	/*
      * 自定义变量（非选项信息）
@@ -142,6 +143,7 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 
     //myupdate
 	data->socket_port = 0;
+	data->batch_size = 1;
 
 	/* add all tables in all schemas by default */
 	t = palloc0(sizeof(SelectTable));
@@ -333,9 +335,27 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
                 char *receiver = strVal(elem->arg);
                 data->socket_ip = strtok(receiver, ":");
                 data->socket_port = atoi(strtok(NULL,":"));
-                elog(WARNING, "%s , %s , %d",receiver,data->socket_ip,data->socket_port);
-
                 pfree(receiver);
+            }
+        }
+        else if (strcmp(elem->defname, "batch-size") == 0)
+        {
+            if (elem->arg == NULL)
+            {
+            	elog(LOG, "batch-size argument is null");
+            	data->batch_size = 1;
+            }
+            else if ( atoi(strVal(elem->arg)) <= 0)
+            {
+                        	ereport(ERROR,
+                        			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                        			 errmsg("could not parse value \"%s\" for parameter \"%s\"",
+                        				 strVal(elem->arg), elem->defname)));
+
+            }
+            else
+            {
+                data->batch_size = atoi(strVal(elem->arg));
             }
         }
 		else
@@ -741,8 +761,6 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     }
 
     close(sockfd);
-    //清空
-    initStringInfo(ctx->out);
     //回收防止内存泄露
     pfree(buf);
 
@@ -1027,9 +1045,23 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip !=NULL){
+        if(data->nr_changes % data->batch_size == 0 ||  data->nr_changes == txn->nentries ){
 
-    //传输值内容
-        while(send_by_socket(ctx , ctx->out->data) != 1);
+             char *buf;
+             buf = (char *)malloc(strlen(ctx->out->data)+2);
+             strcat(buf,"[");
+             strcat(buf, ctx->out->data);
+             strcat(buf,"]");
+
+             elog(WARNING,"%s",buf)
+             //传输值内容
+             while(send_by_socket(ctx , buf ) != 1);
+             //清空
+             initStringInfo(ctx->out);
+        }else{
+            appendStringInfoChar(ctx->out,',');
+        }
+
     }
 }
 
