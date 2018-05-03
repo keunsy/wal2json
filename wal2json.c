@@ -1045,19 +1045,23 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip !=NULL){
+
+        elog(WARNING,"ctx out data  %s",ctx->out->data);
+        elog(WARNING,"nr_change %lu",data->nr_change)
+
         if(data->nr_changes % data->batch_size == 0 ||  data->nr_changes == txn->nentries ){
 
-             char *buf;
-             buf = (char *)malloc(strlen(ctx->out->data)+2);
-             strcat(buf,"[");
-             strcat(buf, ctx->out->data);
-             strcat(buf,"]");
+            char *buf;
+            buf = (char *)malloc(strlen(ctx->out->data)+2);
+            strcat(buf,"[");
+            strcat(buf, ctx->out->data);
+            strcat(buf,"]");
 
-             elog(WARNING,"%s",buf);
-             //传输值内容
-             while(send_by_socket(ctx , buf ) != 1);
-             //清空
-             initStringInfo(ctx->out);
+            elog(WARNING,"%s",buf);
+            //传输值内容
+            while(send_by_socket(ctx , buf ) != 1);
+            //清空
+            initStringInfo(ctx->out);
         }else{
             appendStringInfoChar(ctx->out,',');
         }
