@@ -408,7 +408,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
 
     //dml的情况下 数据不进行输出但仍会回调此方法，因此需要进行过滤
-    elog(WARNING, "is_data_change %s",data->is_data_change);
+    elog(WARNING, "is_data_change %d",data->is_data_change);
     elog(WARNING,"%s",ctx->out->data);
     if(!data->is_data_change){
         return;
