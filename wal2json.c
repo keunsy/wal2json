@@ -413,7 +413,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     if(!data->is_data_change){
         return;
     }
-
+    elog(WARNING,"fseeeeeee");
 
     OutputPluginPrepareWrite(ctx, true);
     if (data->socket_port != 0 && data->socket_ip !=NULL){
