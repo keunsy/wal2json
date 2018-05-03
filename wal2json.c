@@ -881,8 +881,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     close(sockfd);
     //清空
     initStringInfo(ctx->out);
-    //fixme 测试
-     elog(WARNING, "buf: \"%s\"",buf);
+    //回收防止内存泄露
     pfree(buf);
 
     return 1;
