@@ -391,6 +391,8 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 
 	data->is_data_change = false;
 
+	OutputPluginPrepareWrite(ctx, true);
+
 }
 
 /* COMMIT callback */
@@ -412,11 +414,9 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         return;
     }
 
-    OutputPluginPrepareWrite(ctx, true);
     if (data->socket_port != 0 && data->socket_ip !=NULL){
         appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
     }
-    appendStringInfo(ctx->out, "aa");
     OutputPluginWrite(ctx, true);
 
 }
