@@ -1053,7 +1053,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
              strcat(buf, ctx->out->data);
              strcat(buf,"]");
 
-             elog(WARNING,"%s",buf)
+             elog(WARNING,"%s",buf);
              //传输值内容
              while(send_by_socket(ctx , buf ) != 1);
              //清空
