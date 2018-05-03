@@ -408,9 +408,12 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
 
     //dml的情况下 数据不进行输出但仍会回调此方法，因此需要进行过滤
+    elog(WARNING, "is_data_change %s",is_data_change);
+    elog(WARNING,"%s",ctx->out->data);
     if(!data->is_data_change){
         return;
     }
+
 
     OutputPluginPrepareWrite(ctx, true);
     if (data->socket_port != 0 && data->socket_ip !=NULL){
@@ -761,8 +764,6 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     }
 
     close(sockfd);
-    //回收防止内存泄露
-    pfree(buf);
 
     return 1;
 }
@@ -1049,19 +1050,21 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         elog(WARNING,"ctx out data  %s",ctx->out->data);
         elog(WARNING,"nr_change %lu",data->nr_changes);
 
-        if(data->nr_changes % data->batch_size == 0 ||  data->nr_changes == txn->nentries ){
+        if(data->nr_changes % data->batch_size == 0 || data->nr_changes >= txn->nentries ){
 
+            //拼接
             char *buf;
-            buf = (char *)palloc0(strlen(ctx->out->data)+2);
+            buf = (char *)palloc0(strlen(ctx->out->data) + 2);
             strcat(buf,"[");
             strcat(buf, ctx->out->data);
             strcat(buf,"]");
-
-            elog(WARNING,"%s",buf);
             //传输值内容
             while(send_by_socket(ctx , buf ) != 1);
             //清空
             initStringInfo(ctx->out);
+            //回收防止内存泄露
+            pfree(buf);
+
         }else{
             appendStringInfoChar(ctx->out,',');
         }
