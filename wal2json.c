@@ -38,31 +38,26 @@ typedef struct
 	bool		include_type_oids;	/* include data type oids */
 	bool		include_typmod;		/* include typmod in types */
 	bool		include_not_null;	/* include not-null constraints */
-	bool		include_unchanged_toast;	/* include unchanged TOAST field values in output */
-
-	bool		pretty_print;		/* pretty-print JSON? */
-	bool		write_in_chunks;	/* write in chunks? */
 
 	List		*exclude_tables;		/* filter out tables */
 	List		*include_tables;		/* add only these tables */
-
 	/*
 	 * LSN pointing to the end of commit record + 1 (txn->end_lsn)
 	 * It is useful for tools that wants a position to restart from.
 	 */
 	bool		include_lsn;		/* include LSNs */
 
+	char		*payload;	            /*透传信息*/
+	char		*receiver;	            /*socket服务端ip端口 如：192.168.0.177:8080*/
+
+	/*
+     * 自定义变量（非选项信息）
+	 */
 	uint64		nr_changes;			/* # of passes in pg_decode_change() */
 									/* FIXME replace with txn->nentries */
-
-	bool		use_socket;	        /*directly return result or by socket ,default for true*/
-    /* required start */
-	int		    socket_port;	    /*socket connect server port */
-	char		*socket_ip;	        /*socket connect server ip */
-	char		*topic;	            /*message group by*/
-    /* required end */
-
     bool		is_data_change;			/* 数据是否进行了变更 */
+    int		    socket_port;	    /*socket connect server port */
+    char		*socket_ip;	        /*socket connect server ip */
 
 } JsonDecodingData;
 
@@ -141,16 +136,12 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 	data->include_types = true;
 	data->include_type_oids = false;
 	data->include_typmod = true;
-	data->pretty_print = false;
-	data->write_in_chunks = false;
 	data->include_lsn = false;
 	data->include_not_null = false;
-	data->include_unchanged_toast = true;
 	data->exclude_tables = NIL;
 
     //myupdate
 	data->socket_port = 0;
-	data->use_socket = true;
 
 	/* add all tables in all schemas by default */
 	t = palloc0(sizeof(SelectTable));
@@ -262,32 +253,6 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 						 errmsg("could not parse value \"%s\" for parameter \"%s\"",
 							 strVal(elem->arg), elem->defname)));
 		}
-		else if (strcmp(elem->defname, "pretty-print") == 0)
-		{
-			if (elem->arg == NULL)
-			{
-				elog(LOG, "pretty-print argument is null");
-				data->pretty_print = true;
-			}
-			else if (!parse_bool(strVal(elem->arg), &data->pretty_print))
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("could not parse value \"%s\" for parameter \"%s\"",
-							 strVal(elem->arg), elem->defname)));
-		}
-		else if (strcmp(elem->defname, "write-in-chunks") == 0)
-		{
-			if (elem->arg == NULL)
-			{
-				elog(LOG, "write-in-chunks argument is null");
-				data->write_in_chunks = true;
-			}
-			else if (!parse_bool(strVal(elem->arg), &data->write_in_chunks))
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("could not parse value \"%s\" for parameter \"%s\"",
-							 strVal(elem->arg), elem->defname)));
-		}
 		else if (strcmp(elem->defname, "include-lsn") == 0)
 		{
 			if (elem->arg == NULL)
@@ -296,19 +261,6 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 				data->include_lsn = true;
 			}
 			else if (!parse_bool(strVal(elem->arg), &data->include_lsn))
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("could not parse value \"%s\" for parameter \"%s\"",
-							 strVal(elem->arg), elem->defname)));
-		}
-		else if (strcmp(elem->defname, "include-unchanged-toast") == 0)
-		{
-			if (elem->arg == NULL)
-			{
-				elog(LOG, "include-unchanged-toast is null");
-				data->include_unchanged_toast = true;
-			}
-			else if (!parse_bool(strVal(elem->arg), &data->include_unchanged_toast))
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						 errmsg("could not parse value \"%s\" for parameter \"%s\"",
@@ -366,47 +318,26 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 			}
 		}
 		//myupdate
-		else if (strcmp(elem->defname, "topic") == 0)
+		else if (strcmp(elem->defname, "payload") == 0)
         {
-             data->topic = strVal(elem->arg);
+             data->payload = strVal(elem->arg);
         }
-		else if (strcmp(elem->defname, "socket-ip") == 0)
-        {
-        	data->socket_ip = strVal(elem->arg);
-        }
-        else if (strcmp(elem->defname, "socket-port") == 0)
+        else if (strcmp(elem->defname, "receiver") == 0)
         {
             if (elem->arg == NULL)
             {
-            	elog(LOG, "socket-port argument is null");
-            	data->socket_port = 0;
-            }
-            else if ( atoi(strVal(elem->arg)) <= 0)
-            {
-                        	ereport(ERROR,
-                        			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-                        			 errmsg("could not parse value \"%s\" for parameter \"%s\"",
-                        				 strVal(elem->arg), elem->defname)));
-
+            	elog(LOG, "receiver argument is null");
             }
             else
             {
-                data->socket_port = atoi(strVal(elem->arg));
+                char *receiver = strVal(elem->arg);
+                data->socket_ip = strtok(receiver, ":");
+                data->socket_port = atoi(strtok(NULL,":"));
+                elog(WARNING, "%s , %s , %d",receiver,data->socket_ip,data->socket_port);
+
+                pfree(receiver);
             }
         }
-        else if (strcmp(elem->defname, "use-socket") == 0)
-        		{
-        			if (elem->arg == NULL)
-        			{
-        				elog(LOG, "use-socket argument is null");
-        				data->use_socket = true;
-        			}
-        			else if (!parse_bool(strVal(elem->arg), &data->use_socket))
-        				ereport(ERROR,
-        						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-        						 errmsg("could not parse value \"%s\" for parameter \"%s\"",
-        							 strVal(elem->arg), elem->defname)));
-        		}
 		else
 		{
 			ereport(ERROR,
@@ -436,24 +367,6 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn)
 
 	JsonDecodingData *data = ctx->output_plugin_private;
 
-    if(data->use_socket){
-        if(data->topic == NULL ){
-            ereport(ERROR,
-                    (errcode(ERRCODE_INVALID_NAME),
-                     errmsg("option \"%s\" is required","topic")));
-        }
-        if(data->socket_ip == NULL ){
-            ereport(ERROR,
-                    (errcode(ERRCODE_INVALID_NAME),
-                     errmsg("option \"%s\" is required","socket-ip")));
-        }
-        if(data->socket_port == 0 ){
-            ereport(ERROR,
-                    (errcode(ERRCODE_INVALID_NAME),
-                     errmsg("option \"%s\" is required","socket-port")));
-        }
-    }
-
 	data->nr_changes = 0;
 
 	data->is_data_change = false;
@@ -480,7 +393,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     }
 
     OutputPluginPrepareWrite(ctx, true);
-    if(data->use_socket ){
+    if (data->socket_port != 0 && data->socket_ip !=NULL){
         appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
     }
     OutputPluginWrite(ctx, true);
@@ -524,47 +437,23 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 	 */
 	if (replident)
 	{
-		if (data->pretty_print)
-		{
-			appendStringInfoString(&colnames, "\t\t\t\"oldkeys\": {\n");
-			appendStringInfoString(&colnames, "\t\t\t\t\"keynames\": [");
-			appendStringInfoString(&coltypes, "\t\t\t\t\"keytypes\": [");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\t\t\t\"keytypeoids\": [");
-			appendStringInfoString(&colvalues, "\t\t\t\t\"keyvalues\": [");
-		}
-		else
-		{
-			appendStringInfoString(&colnames, "\"oldkeys\":{");
-			appendStringInfoString(&colnames, "\"keynames\":[");
-			appendStringInfoString(&coltypes, "\"keytypes\":[");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\"keytypeoids\": [");
-			appendStringInfoString(&colvalues, "\"keyvalues\":[");
-		}
+
+		appendStringInfoString(&colnames, "\"oldkeys\":{");
+		appendStringInfoString(&colnames, "\"keynames\":[");
+		appendStringInfoString(&coltypes, "\"keytypes\":[");
+		if (data->include_type_oids)
+			appendStringInfoString(&coltypeoids, "\"keytypeoids\": [");
+		appendStringInfoString(&colvalues, "\"keyvalues\":[");
 	}
 	else
 	{
-		if (data->pretty_print)
-		{
-			appendStringInfoString(&colnames, "\t\t\t\"columnnames\": [");
-			appendStringInfoString(&coltypes, "\t\t\t\"columntypes\": [");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\t\t\t\"columntypeoids\": [");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "\t\t\t\"columnoptionals\": [");
-			appendStringInfoString(&colvalues, "\t\t\t\"columnvalues\": [");
-		}
-		else
-		{
-			appendStringInfoString(&colnames, "\"columnnames\":[");
-			appendStringInfoString(&coltypes, "\"columntypes\":[");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
-			appendStringInfoString(&colvalues, "\"columnvalues\":[");
-		}
+	    appendStringInfoString(&colnames, "\"columnnames\":[");
+	    appendStringInfoString(&coltypes, "\"columntypes\":[");
+	    if (data->include_type_oids)
+	    	appendStringInfoString(&coltypeoids, "\"columntypeoids\": [");
+	    if (data->include_not_null)
+	    	appendStringInfoString(&colnotnulls, "\"columnoptionals\": [");
+	    appendStringInfoString(&colvalues, "\"columnvalues\":[");
 	}
 
 	/* Print column information (name, type, value) */
@@ -750,67 +639,34 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 		/* The first column does not have comma */
 		if (strcmp(comma, "") == 0)
 		{
-			if (data->pretty_print)
-				comma = ", ";
-			else
-				comma = ",";
+			comma = ",";
 		}
 	}
 
 	/* Column info ends */
 	if (replident)
 	{
-		if (data->pretty_print)
-		{
-			appendStringInfoString(&colnames, "],\n");
-			if (data->include_types)
-				appendStringInfoString(&coltypes, "],\n");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "],\n");
-			appendStringInfoString(&colvalues, "]\n");
-			appendStringInfoString(&colvalues, "\t\t\t}\n");
-		}
-		else
-		{
-			appendStringInfoString(&colnames, "],");
-			if (data->include_types)
-				appendStringInfoString(&coltypes, "],");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "],");
-			appendStringInfoCharMacro(&colvalues, ']');
-			appendStringInfoCharMacro(&colvalues, '}');
-		}
+		appendStringInfoString(&colnames, "],");
+		if (data->include_types)
+			appendStringInfoString(&coltypes, "],");
+		if (data->include_type_oids)
+			appendStringInfoString(&coltypeoids, "],");
+		appendStringInfoCharMacro(&colvalues, ']');
+		appendStringInfoCharMacro(&colvalues, '}');
 	}
 	else
 	{
-		if (data->pretty_print)
-		{
-			appendStringInfoString(&colnames, "],\n");
-			if (data->include_types)
-				appendStringInfoString(&coltypes, "],\n");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "],\n");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "],\n");
-			if (hasreplident)
-				appendStringInfoString(&colvalues, "],\n");
-			else
-				appendStringInfoString(&colvalues, "]\n");
-		}
+		appendStringInfoString(&colnames, "],");
+		if (data->include_types)
+			appendStringInfoString(&coltypes, "],");
+		if (data->include_type_oids)
+			appendStringInfoString(&coltypeoids, "],");
+		if (data->include_not_null)
+			appendStringInfoString(&colnotnulls, "],");
+		if (hasreplident)
+			appendStringInfoString(&colvalues, "],");
 		else
-		{
-			appendStringInfoString(&colnames, "],");
-			if (data->include_types)
-				appendStringInfoString(&coltypes, "],");
-			if (data->include_type_oids)
-				appendStringInfoString(&coltypeoids, "],");
-			if (data->include_not_null)
-				appendStringInfoString(&colnotnulls, "],");
-			if (hasreplident)
-				appendStringInfoString(&colvalues, "],");
-			else
-				appendStringInfoCharMacro(&colvalues, ']');
-		}
+			appendStringInfoCharMacro(&colvalues, ']');
 	}
 
 	/* Print data */
@@ -1051,22 +907,13 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	switch (change->action)
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
-			if (data->pretty_print)
-				appendStringInfoString(ctx->out, "\t\t\t\"kind\": \"insert\",\n");
-			else
-				appendStringInfoString(ctx->out, "\"kind\":\"insert\",");
+			appendStringInfoString(ctx->out, "\"kind\":\"insert\",");
 			break;
 		case REORDER_BUFFER_CHANGE_UPDATE:
-			if(data->pretty_print)
-				appendStringInfoString(ctx->out, "\t\t\t\"kind\": \"update\",\n");
-			else
-				appendStringInfoString(ctx->out, "\"kind\":\"update\",");
+			appendStringInfoString(ctx->out, "\"kind\":\"update\",");
 			break;
 		case REORDER_BUFFER_CHANGE_DELETE:
-			if (data->pretty_print)
-				appendStringInfoString(ctx->out, "\t\t\t\"kind\": \"delete\",\n");
-			else
-				appendStringInfoString(ctx->out, "\"kind\":\"delete\",");
+			appendStringInfoString(ctx->out, "\"kind\":\"delete\",");
 			break;
 		default:
 			Assert(false);
@@ -1089,7 +936,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     }
 
     if(data->use_socket){
-        appendStringInfo(ctx->out, "\"topic\":\"%s\",", data->topic);
+        appendStringInfo(ctx->out, "\"payload\":\"%s\",", data->payload);
     }
     appendStringInfo(ctx->out, "\"slot_name\":\"%s\",", NameStr(ctx->slot->data.name));
 
@@ -1099,30 +946,15 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 
 	/* Print table name (possibly) qualified */
-	if (data->pretty_print)
+	if (data->include_schemas)
 	{
-		if (data->include_schemas)
-		{
-			appendStringInfoString(ctx->out, "\t\t\t\"schema\": ");
-			escape_json(ctx->out, get_namespace_name(class_form->relnamespace));
-			appendStringInfoString(ctx->out, ",\n");
-		}
-		appendStringInfoString(ctx->out, "\t\t\t\"table\": ");
-		escape_json(ctx->out, NameStr(class_form->relname));
-		appendStringInfoString(ctx->out, ",\n");
-	}
-	else
-	{
-		if (data->include_schemas)
-		{
-			appendStringInfoString(ctx->out, "\"schema\":");
-			escape_json(ctx->out, get_namespace_name(class_form->relnamespace));
-			appendStringInfoCharMacro(ctx->out, ',');
-		}
-		appendStringInfoString(ctx->out, "\"table\":");
-		escape_json(ctx->out, NameStr(class_form->relname));
+		appendStringInfoString(ctx->out, "\"schema\":");
+		escape_json(ctx->out, get_namespace_name(class_form->relnamespace));
 		appendStringInfoCharMacro(ctx->out, ',');
 	}
+	appendStringInfoString(ctx->out, "\"table\":");
+	escape_json(ctx->out, NameStr(class_form->relname));
+	appendStringInfoCharMacro(ctx->out, ',');
 
 	switch (change->action)
 	{
@@ -1188,16 +1020,13 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			Assert(false);
 	}
 
-	if (data->pretty_print)
-		appendStringInfoString(ctx->out, "\t\t}");
-	else
-		appendStringInfoCharMacro(ctx->out, '}');
+	appendStringInfoCharMacro(ctx->out, '}');
 
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
-    if (data->use_socket && data->socket_port != 0 && data->socket_ip !=NULL){
+    if (data->socket_port != 0 && data->socket_ip !=NULL){
 
     //传输值内容
         while(send_by_socket(ctx , ctx->out->data) != 1);
@@ -1220,13 +1049,6 @@ pg_decode_message(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	/* Avoid leaking memory by using and resetting our own context */
 	old = MemoryContextSwitchTo(data->context);
 
-	/*
-	 * write immediately iif (i) write-in-chunks=1 or (ii) non-transactional
-	 * messages.
-	 */
-	// 屏蔽，几乎不用调用此方法
-//	if (data->write_in_chunks || !transactional)
-//		OutputPluginPrepareWrite(ctx, true);
 
 	/*
 	 * increment counter only for transactional messages because
@@ -1235,96 +1057,45 @@ pg_decode_message(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	if (transactional)
 		data->nr_changes++;
 
-	if (data->pretty_print)
+	/* build a complete JSON object for non-transactional message */
+	if (!transactional)
 	{
-		/* if we don't write in chunks, we need a newline here */
-		if (!data->write_in_chunks && transactional)
-			appendStringInfoChar(ctx->out, '\n');
-
-		/* build a complete JSON object for non-transactional message */
-		if (!transactional)
-		{
-			appendStringInfoString(ctx->out, "{\n");
-			appendStringInfoString(ctx->out, "\t\"change\": [\n");
-		}
-
-		appendStringInfoString(ctx->out, "\t\t");
-
-		if (data->nr_changes > 1)
-			appendStringInfoChar(ctx->out, ',');
-
-		appendStringInfoString(ctx->out, "{\n");
-
-		appendStringInfoString(ctx->out, "\t\t\t\"kind\": \"message\",\n");
-
-		if (transactional)
-			appendStringInfoString(ctx->out, "\t\t\t\"transactional\": true,\n");
-		else
-			appendStringInfoString(ctx->out, "\t\t\t\"transactional\": false,\n");
-
-		appendStringInfo(ctx->out, "\t\t\t\"prefix\": ");
-		escape_json(ctx->out, prefix);
-		appendStringInfoString(ctx->out, ",\n\t\t\t\"content\": ");
-
-		// force null-terminated string
-		content_str = (char *)palloc0(content_size+1);
-		strncpy(content_str, content, content_size);
-		escape_json(ctx->out, content_str);
-		pfree(content_str);
-
-		appendStringInfoString(ctx->out, "\n\t\t}");
-
-		/* build a complete JSON object for non-transactional message */
-		if (!transactional)
-		{
-			appendStringInfoString(ctx->out, "\n\t]");
-			appendStringInfoString(ctx->out, "\n}");
-		}
+		appendStringInfoString(ctx->out, "{\"change\":[");
 	}
+
+	if (data->nr_changes > 1)
+		appendStringInfoString(ctx->out, ",{");
 	else
+		appendStringInfoChar(ctx->out, '{');
+
+	appendStringInfoString(ctx->out, "\"kind\":\"message\",");
+
+	if (transactional)
+		appendStringInfoString(ctx->out, "\"transactional\":true,");
+	else
+		appendStringInfoString(ctx->out, "\"transactional\":false,");
+
+	appendStringInfo(ctx->out, "\"prefix\":");
+	escape_json(ctx->out, prefix);
+	appendStringInfoString(ctx->out, ",\"content\":");
+
+	// force null-terminated string
+	content_str = (char *)palloc0(content_size+1);
+	strncpy(content_str, content, content_size);
+	escape_json(ctx->out, content_str);
+	pfree(content_str);
+
+	appendStringInfoChar(ctx->out, '}');
+
+	/* build a complete JSON object for non-transactional message */
+	if (!transactional)
 	{
-		/* build a complete JSON object for non-transactional message */
-		if (!transactional)
-		{
-			appendStringInfoString(ctx->out, "{\"change\":[");
-		}
-
-		if (data->nr_changes > 1)
-			appendStringInfoString(ctx->out, ",{");
-		else
-			appendStringInfoChar(ctx->out, '{');
-
-		appendStringInfoString(ctx->out, "\"kind\":\"message\",");
-
-		if (transactional)
-			appendStringInfoString(ctx->out, "\"transactional\":true,");
-		else
-			appendStringInfoString(ctx->out, "\"transactional\":false,");
-
-		appendStringInfo(ctx->out, "\"prefix\":");
-		escape_json(ctx->out, prefix);
-		appendStringInfoString(ctx->out, ",\"content\":");
-
-		// force null-terminated string
-		content_str = (char *)palloc0(content_size+1);
-		strncpy(content_str, content, content_size);
-		escape_json(ctx->out, content_str);
-		pfree(content_str);
-
-		appendStringInfoChar(ctx->out, '}');
-
-		/* build a complete JSON object for non-transactional message */
-		if (!transactional)
-		{
-			appendStringInfoString(ctx->out, "]}");
-		}
+		appendStringInfoString(ctx->out, "]}");
 	}
 
 	MemoryContextSwitchTo(old);
 	MemoryContextReset(data->context);
 
-//	if (data->write_in_chunks || !transactional)
-//		OutputPluginWrite(ctx, true);
 }
 #endif
 
