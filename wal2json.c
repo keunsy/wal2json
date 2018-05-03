@@ -1047,7 +1047,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     if (data->socket_port != 0 && data->socket_ip !=NULL){
 
         elog(WARNING,"ctx out data  %s",ctx->out->data);
-        elog(WARNING,"nr_change %lu",data->nr_change)
+        elog(WARNING,"nr_change %lu",data->nr_change);
 
         if(data->nr_changes % data->batch_size == 0 ||  data->nr_changes == txn->nentries ){
 
