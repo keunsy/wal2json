@@ -1052,10 +1052,10 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         if(data->nr_changes % data->batch_size == 0 ||  data->nr_changes == txn->nentries ){
 
             char *buf;
-            buf = (char *)malloc(strlen(ctx->out->data)+4);
-            strcat(buf,"{[");
+            buf = (char *)palloc0(strlen(ctx->out->data)+2);
+            strcat(buf,"[");
             strcat(buf, ctx->out->data);
-            strcat(buf,"]}");
+            strcat(buf,"]");
 
             elog(WARNING,"%s",buf);
             //传输值内容
