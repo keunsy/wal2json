@@ -43,8 +43,8 @@ typedef struct
 	bool		pretty_print;		/* pretty-print JSON? */
 	bool		write_in_chunks;	/* write in chunks? */
 
-	List		*filter_tables;		/* filter out tables */
-	List		*add_tables;		/* add only these tables */
+	List		*exclude_tables;		/* filter out tables */
+	List		*include_tables;		/* add only these tables */
 
 	/*
 	 * LSN pointing to the end of commit record + 1 (txn->end_lsn)
@@ -146,7 +146,7 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 	data->include_lsn = false;
 	data->include_not_null = false;
 	data->include_unchanged_toast = true;
-	data->filter_tables = NIL;
+	data->exclude_tables = NIL;
 
     //myupdate
 	data->socket_port = 0;
@@ -156,7 +156,7 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 	t = palloc0(sizeof(SelectTable));
 	t->allschemas = true;
 	t->alltables = true;
-	data->add_tables = lappend(data->add_tables, t);
+	data->include_tables = lappend(data->include_tables, t);
 
 	data->nr_changes = 0;
 
@@ -314,18 +314,18 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 						 errmsg("could not parse value \"%s\" for parameter \"%s\"",
 							 strVal(elem->arg), elem->defname)));
 		}
-		else if (strcmp(elem->defname, "filter-tables") == 0)
+		else if (strcmp(elem->defname, "exclude-tables") == 0)
 		{
 			char	*rawstr;
 
 			if (elem->arg == NULL)
 			{
-				elog(LOG, "filter-tables argument is null");
-				data->filter_tables = NIL;
+				elog(LOG, "exclude-tables argument is null");
+				data->exclude_tables = NIL;
 			}
 
 			rawstr = pstrdup(strVal(elem->arg));
-			if (!string_to_SelectTable(rawstr, ',', &data->filter_tables))
+			if (!string_to_SelectTable(rawstr, ',', &data->exclude_tables))
 			{
 				pfree(rawstr);
 				ereport(ERROR,
@@ -335,7 +335,7 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 			}
 			pfree(rawstr);
 		}
-		else if (strcmp(elem->defname, "add-tables") == 0)
+		else if (strcmp(elem->defname, "include-tables") == 0)
 		{
 			char	*rawstr;
 
@@ -343,18 +343,18 @@ pg_decode_startup(LogicalDecodingContext *ctx, OutputPluginOptions *opt, bool is
 			 * If this parameter is specified, remove 'all tables in all
 			 * schemas' value from list.
 			 */
-			list_free_deep(data->add_tables);
-			data->add_tables = NIL;
+			list_free_deep(data->include_tables);
+			data->include_tables = NIL;
 
 			if (elem->arg == NULL)
 			{
-				elog(LOG, "add-tables argument is null");
-				data->add_tables = NIL;
+				elog(LOG, "include-tables argument is null");
+				data->include_tables = NIL;
 			}
 			else
 			{
 				rawstr = pstrdup(strVal(elem->arg));
-				if (!string_to_SelectTable(rawstr, ',', &data->add_tables))
+				if (!string_to_SelectTable(rawstr, ',', &data->include_tables))
 				{
 					pfree(rawstr);
 					ereport(ERROR,
@@ -990,11 +990,11 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	}
 
 	/* Filter tables, if available */
-	if (list_length(data->filter_tables) > 0)
+	if (list_length(data->exclude_tables) > 0)
 	{
 		ListCell	*lc;
 
-		foreach(lc, data->filter_tables)
+		foreach(lc, data->exclude_tables)
 		{
 			SelectTable	*t = lfirst(lc);
 
@@ -1012,13 +1012,13 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	}
 
 	/* Add tables */
-	if (list_length(data->add_tables) > 0)
+	if (list_length(data->include_tables) > 0)
 	{
 		ListCell	*lc;
 		bool		skip = true;
 
 		/* all tables in all schemas are added by default */
-		foreach(lc, data->add_tables)
+		foreach(lc, data->include_tables)
 		{
 			SelectTable	*t = lfirst(lc);
 
