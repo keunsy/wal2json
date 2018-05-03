@@ -408,17 +408,15 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	elog(DEBUG1, "# of subxacts: %d", txn->nsubtxns);
 
     //dml的情况下 数据不进行输出但仍会回调此方法，因此需要进行过滤
-    elog(WARNING, "is_data_change %d",data->is_data_change);
-    elog(WARNING,"%s",ctx->out->data);
     if(!data->is_data_change){
         return;
     }
-    elog(WARNING,"fseeeeeee");
 
     OutputPluginPrepareWrite(ctx, true);
     if (data->socket_port != 0 && data->socket_ip !=NULL){
         appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
     }
+    appendStringInfo(ctx->out, "aa");
     OutputPluginWrite(ctx, true);
 
 }
@@ -1046,9 +1044,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip !=NULL){
-
-        elog(WARNING,"ctx out data  %s",ctx->out->data);
-        elog(WARNING,"nr_change %lu",data->nr_changes);
 
         if(data->nr_changes % data->batch_size == 0 || data->nr_changes >= txn->nentries ){
 
