@@ -797,10 +797,6 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
          return 0;
     }
 
-    //回收防止内存泄露
-    if(buf != NULL){
-        pfree(buf);
-    }
     close(sockfd);
 
     return 1;
@@ -1103,7 +1099,10 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
                 elog(WARNING,"Send by socket failed ,start retry");
             }
             elog(WARNING,"33333333");
-
+            //回收防止内存泄露
+            if(buf != NULL){
+                pfree(buf);
+            }
             elog(WARNING,"444444");
             //清空
             initStringInfo(ctx->out);
