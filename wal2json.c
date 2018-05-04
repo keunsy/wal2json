@@ -752,7 +752,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     ioctl(sockfd, FIONBIO, &ul); //设置为非阻塞模式
 
     bool ret = false;
-    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(sockaddr)) == -1){
+    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr)) == -1){
         tm.tv_sec = 10;
         tm.tv_usec = 0;
         FD_ZERO(&set);
