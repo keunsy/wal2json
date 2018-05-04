@@ -692,11 +692,19 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
             FD_SET(sockfd, &set);
             if (select(sockfd + 1, NULL, &set, NULL, &tm) > 0) {
                 getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t * ) & len);
-                if (error == 0) ret = true;
-                else ret = false;
-            } else ret = false;
+                if (error == 0) {
+                    ret = true;
+                }
+                else {
+                    ret = false;
+                }
+            } else {
+                ret = false;
+            }
         }
-    } else ret = true;
+    } else {
+        ret = true;
+    }
 
     if (!ret) {
         elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
@@ -731,9 +739,12 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     }
 
     close(sockfd);
-    initStringInfo(ctx->out);
+
     //回收防止内存泄露
     pfree(buf);
+
+    initStringInfo(ctx->out);
+
 
     return 0;
 }
