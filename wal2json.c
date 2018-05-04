@@ -22,6 +22,7 @@
 #include <sys/wait.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 PG_MODULE_MAGIC;
 
