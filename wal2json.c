@@ -885,8 +885,10 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 
     int mod = data->nr_changes % data->batch_size;
-    if(mod == 1 || txn->nentries == 1){
-        appendStringInfoCharMacro(ctx->out, '[');
+    if (data->socket_port != 0 && data->socket_ip != NULL) {
+        if(mod == 1 || txn->nentries == 1){
+            appendStringInfoCharMacro(ctx->out, '[');
+        }
     }
 
     /* Change starts */
@@ -1001,12 +1003,13 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     MemoryContextSwitchTo(old);
     MemoryContextReset(data->context);
 
-    if (mod == 0 || data->nr_changes >= txn->nentries) {
-        appendStringInfoCharMacro(ctx->out, ']');
-    }else{
-        appendStringInfoChar(ctx->out, ',');
+    if (data->socket_port != 0 && data->socket_ip != NULL) {
+        if (mod == 0 || data->nr_changes >= txn->nentries) {
+            appendStringInfoCharMacro(ctx->out, ']');
+        }else{
+            appendStringInfoChar(ctx->out, ',');
+        }
     }
-
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         //传输值内容
