@@ -1078,11 +1078,11 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip !=NULL){
 
-        if(data->nr_changes % data->batch_size == 0 || data->nr_changes >= txn->nentries ){
 
+        if(data->nr_changes % data->batch_size == 0 || data->nr_changes >= txn->nentries ){
             //拼接
             char *buf;
-            buf = (char *)palloc0(strlen(ctx->out->data) + 2);
+            buf = (char *)palloc0(strlen(ctx->out->data) + 10);
             strcat(buf,"[");
             strcat(buf, ctx->out->data);
             strcat(buf,"]");
@@ -1091,10 +1091,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
                 elog(WARNING,"Send by socket failed ,start retry");
             }
             initStringInfo(ctx->out);
-
             //回收防止内存泄露
             pfree(buf);
-
         }else{
             appendStringInfoChar(ctx->out,',');
         }
