@@ -416,7 +416,7 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     }
 
     if (data->socket_port != 0 && data->socket_ip !=NULL){
-        appendStringInfo(ctx->out, "total_num:%lu,commitTimestamp:%s",txn->nentries,timestamptz_to_str(txn->commit_time));
+        appendStringInfo(ctx->out, "total_num : %lu , commitTimestamp : %s",txn->nentries,timestamptz_to_str(txn->commit_time));
     }
     OutputPluginWrite(ctx, true);
 
@@ -744,52 +744,52 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
 
 
     //超时设置
-//    int error=-1, len;
-//    len = sizeof(int);
-//    struct timeval tm;
-//    fd_set set;
-//    unsigned long ul = 1;
-//
-//    ioctl(sockfd, FIONBIO, &ul); //设置为非阻塞模式
-//
-//
-//    bool ret = false;
-//    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr)) < 0 ){
-//        tm.tv_sec = 10;
-//        tm.tv_usec = 0;
-//        FD_ZERO(&set);
-//        FD_SET(sockfd, &set);
-//        if( select(sockfd+1, NULL, &set, NULL, &tm) > 0) {
-//            getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
-//            if(error == 0) ret = true;
-//            else ret = false;
-//        } else ret = false;
-//    }else ret = true;
-//
-//    ul = 0;
-//    ioctl(sockfd, FIONBIO, &ul); //设置为阻塞模式
-//    if(!ret){
-//        elog(WARNING, "connect [\"%s\",%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
-//        close(sockfd);
-//        return 0;
-//    }
+    int error=-1, len;
+    len = sizeof(int);
+    struct timeval tm;
+    fd_set set;
+    unsigned long ul = 1;
 
-    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
-        elog(WARNING, "connect [\"%s\",%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
+    ioctl(sockfd, FIONBIO, &ul); //设置为非阻塞模式
+
+
+    bool ret = false;
+    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr)) < 0 ){
+        tm.tv_sec = 10;
+        tm.tv_usec = 0;
+        FD_ZERO(&set);
+        FD_SET(sockfd, &set);
+        if( select(sockfd+1, NULL, &set, NULL, &tm) > 0) {
+            getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
+            if(error == 0) ret = true;
+            else ret = false;
+        } else ret = false;
+    }else ret = true;
+
+    ul = 0;
+    ioctl(sockfd, FIONBIO, &ul); //设置为阻塞模式
+    if(!ret){
+        elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
+        close(sockfd);
         return 0;
     }
+
+//    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
+//        elog(WARNING, "connect [\"%s\",%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
+//        return 0;
+//    }
 
     elog(DEBUG2, "connect success ,start send msg");
 
     if(send(sockfd,buf,strlen(buf),0) < 0 ){
          // 如果是error级别 将直接中断
-         elog(WARNING, "send [\"%s\",%d] failed for \"%s\" ,errono: \"%d\" ",data->socket_ip,data->socket_port, strerror(errno) , errno);
+         elog(WARNING, "send [%s,%d] failed for \"%s\" ,errono: \"%d\" ",data->socket_ip,data->socket_port, strerror(errno) , errno);
          close(sockfd);
          return 0;
     }
 
     if(recv(sockfd,result,sizeof(result),0) < 0 ||  strcmp(result,"1") != 0){
-         elog(WARNING, "recv [\"%s\",%d] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
+         elog(WARNING, "recv [%s,%d] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",data->socket_ip,data->socket_port, strerror(errno) , errno ,result);
          close(sockfd);
          return 0;
     }
@@ -1088,7 +1088,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             strcat(buf,"]");
             //传输值内容
             while(send_by_socket(ctx , buf ) != 1){
-                elog(WARNING,"Send by socket failed ,start retry");
+                elog(WARNING,"Send by socket [%s,%d] failed ,start retry",data->socket_ip,data->socket_port);
             }
             initStringInfo(ctx->out);
             //回收防止内存泄露
