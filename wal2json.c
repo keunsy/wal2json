@@ -752,7 +752,6 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
 //
 //    ioctl(sockfd, FIONBIO, &ul); //设置为非阻塞模式
 //
-//    elog(WARNING,"11111111");
 //
 //    bool ret = false;
 //    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr)) < 0 ){
@@ -767,7 +766,6 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
 //        } else ret = false;
 //    }else ret = true;
 //
-// elog(WARNING,"2222222222");
 //    ul = 0;
 //    ioctl(sockfd, FIONBIO, &ul); //设置为阻塞模式
 //    if(!ret){
@@ -775,7 +773,6 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
 //        close(sockfd);
 //        return 0;
 //    }
-//     elog(WARNING,"333333333333");
 
     if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
         elog(WARNING, "connect [\"%s\",%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
@@ -833,7 +830,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	tablename = NameStr(class_form->relname);
 
 
-    elog(WARNING,"666666666");
 	/* Make sure rd_replidindex is set */
 	RelationGetIndexList(relation);
 
@@ -1010,8 +1006,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	escape_json(ctx->out, NameStr(class_form->relname));
 	appendStringInfoCharMacro(ctx->out, ',');
 
-
-    elog(WARNING,"777777777777");
 	switch (change->action)
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
@@ -1076,8 +1070,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			Assert(false);
 	}
 
-        elog(WARNING,"8888888888888");
-
 	appendStringInfoCharMacro(ctx->out, '}');
 
 	MemoryContextSwitchTo(old);
@@ -1098,17 +1090,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             while(send_by_socket(ctx , buf ) != 1){
                 elog(WARNING,"Send by socket failed ,start retry");
             }
-            elog(WARNING,"33333333");
             //回收防止内存泄露
 //            if(buf != NULL){
-//                pfree(buf);
+            pfree(buf);
 //            }
-            elog(WARNING,"444444");
             //清空
             initStringInfo(ctx->out);
-
-
-            elog(WARNING,"55555555555");
 
         }else{
             appendStringInfoChar(ctx->out,',');
