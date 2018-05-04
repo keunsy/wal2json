@@ -833,6 +833,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	tablename = NameStr(class_form->relname);
 
 
+    elog(WARNING,"666666666");
 	/* Make sure rd_replidindex is set */
 	RelationGetIndexList(relation);
 
@@ -1009,6 +1010,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	escape_json(ctx->out, NameStr(class_form->relname));
 	appendStringInfoCharMacro(ctx->out, ',');
 
+
+    elog(WARNING,"777777777777");
 	switch (change->action)
 	{
 		case REORDER_BUFFER_CHANGE_INSERT:
@@ -1073,6 +1076,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 			Assert(false);
 	}
 
+        elog(WARNING,"8888888888888");
+
 	appendStringInfoCharMacro(ctx->out, '}');
 
 	MemoryContextSwitchTo(old);
@@ -1081,7 +1086,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip !=NULL){
 
-         elog(WARNING,"-1-1-1-1-1");
         if(data->nr_changes % data->batch_size == 0 || data->nr_changes >= txn->nentries ){
 
             //拼接
@@ -1091,7 +1095,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             strcat(buf, ctx->out->data);
             strcat(buf,"]");
             //传输值内容
-            elog(WARNING,"0000000000");
             while(send_by_socket(ctx , buf ) != 1){
                 elog(WARNING,"Send by socket failed ,start retry");
             }
@@ -1101,6 +1104,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             initStringInfo(ctx->out);
             //回收防止内存泄露
             pfree(buf);
+
+            elog(WARNING,"55555555555");
 
         }else{
             appendStringInfoChar(ctx->out,',');
