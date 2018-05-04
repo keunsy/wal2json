@@ -1090,12 +1090,10 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             while(send_by_socket(ctx , buf ) != 1){
                 elog(WARNING,"Send by socket failed ,start retry");
             }
-            //回收防止内存泄露
-//            if(buf != NULL){
-            pfree(buf);
-//            }
-            //清空
             initStringInfo(ctx->out);
+
+            //回收防止内存泄露
+            pfree(buf);
 
         }else{
             appendStringInfoChar(ctx->out,',');
