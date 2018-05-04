@@ -751,9 +751,9 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     ioctl(sockfd, FIONBIO, &ul); //设置为非阻塞模式
 
     bool ret = false;
-    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(serv_addr)) == -1){
-        tm.tv_set = 10;
-        tm.tv_uset = 0;
+    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(sockaddr)) == -1){
+        tm.tv_sec = 10;
+        tm.tv_usec = 0;
         FD_ZERO(&set);
         FD_SET(sockfd, &set);
         if( select(sockfd+1, NULL, &set, NULL, &tm) > 0) {
