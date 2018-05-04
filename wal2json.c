@@ -749,28 +749,41 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     fd_set set;
     unsigned long ul = 1;
 
-    ioctl(sockfd, FIONBIO, &ul); //设置为非阻塞模式
+    //设置为非阻塞模式
+    if(ioctl(sockfd, FIONBIO, &ul) < 0){
+        close(sockfd);
+        elog(WARNING, "ioctl 1 [%s,%d] failed");
+        return 0;
+    }
 
     bool ret = false;
     if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr)) < 0 ){
-        tm.tv_sec = 10;
-        tm.tv_usec = 0;
-        FD_ZERO(&set);
-        FD_SET(sockfd, &set);
-        if( select(sockfd+1, NULL, &set, NULL, &tm) > 0) {
-            getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
-            if(error == 0) ret = true;
-            else ret = false;
-        } else ret = false;
+        if (errno == EINPROGRESS) {
+            tm.tv_sec = 10;
+            tm.tv_usec = 0;
+            FD_ZERO(&set);
+            FD_SET(sockfd, &set);
+            if(select(sockfd+1, NULL, &set, NULL, &tm) > 0) {
+                getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
+                if(error == 0) ret = true;
+                else ret = false;
+            } else ret = false;
+        }
     }else ret = true;
 
-    ul = 0;
-    ioctl(sockfd, FIONBIO, &ul); //设置为阻塞模式
     if(!ret){
         elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
         close(sockfd);
         return 0;
     }
+    ul = 0;
+    //设置为阻塞模式
+    if(ioctl(sockfd, FIONBIO, &ul) < 0){
+        close(sockfd);
+        elog(WARNING, "ioctl 0 [%s,%d] failed");
+        return 0;
+    }
+
 
     elog(DEBUG2, "connect success ,start send msg");
 
