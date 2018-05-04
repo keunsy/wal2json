@@ -744,7 +744,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
 
     int error=-1, len;
     len = sizeof(int);
-    timeval tm;
+    struct timeval tm;
     fd_set set;
     unsigned long ul = 1;
 
