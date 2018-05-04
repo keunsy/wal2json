@@ -751,7 +751,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     //设置为非阻塞模式
     if(ioctl(sockfd, FIONBIO, &ul) < 0){
         close(sockfd);
-        elog(WARNING, "ioctl 1 [%s,%d] failed");
+        elog(WARNING, "ioctl 1 [%s,%d] failed",data->socket_ip,data->socket_port);
         return 0;
     }
 
@@ -780,7 +780,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     //设置为阻塞模式
     if(ioctl(sockfd, FIONBIO, &ul) < 0){
         close(sockfd);
-        elog(WARNING, "ioctl 0 [%s,%d] failed");
+        elog(WARNING, "ioctl 0 [%s,%d] failed",data->socket_ip,data->socket_port);
         return 0;
     }
 
