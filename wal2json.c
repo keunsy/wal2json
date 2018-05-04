@@ -767,15 +767,10 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     ul = 0;
     ioctl(sockfd, FIONBIO, &ul); //设置为阻塞模式
     if(!ret){
-        elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(error) , error);
+        elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
         close(sockfd);
         return 0;
     }
-
-//    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
-//        elog(WARNING, "connect [\"%s\",%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
-//        return 0;
-//    }
 
     elog(DEBUG2, "connect success ,start send msg");
 
@@ -1085,6 +1080,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             strcat(buf,"]");
             //传输值内容
             while(send_by_socket(ctx , buf ) != 1){
+                sleep(3);//单位秒
                 elog(WARNING,"Send by socket [%s,%d] failed ,start retry",data->socket_ip,data->socket_port);
             }
             initStringInfo(ctx->out);
