@@ -679,7 +679,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     if (ioctl(sockfd, FIONBIO, &ul) < 0) {
         close(sockfd);
         elog(WARNING, "ioctl 1 [%s,%d] failed", data->socket_ip, data->socket_port);
-        return 0;
+        return -1;
     }
 
 
@@ -702,14 +702,14 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
              data->socket_port, strerror(errno), errno);
         close(sockfd);
-        return 0;
+        return -1;
     }
     ul = 0;
     //设置为阻塞模式
     if (ioctl(sockfd, FIONBIO, &ul) < 0) {
         close(sockfd);
         elog(WARNING, "ioctl 0 [%s,%d] failed", data->socket_ip, data->socket_port);
-        return 0;
+        return -1;
     }
 
 
@@ -720,14 +720,14 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         elog(WARNING, "send [%s,%d] failed for \"%s\" ,errono: \"%d\" ", data->socket_ip,
              data->socket_port, strerror(errno), errno);
         close(sockfd);
-        return 0;
+        return -1;
     }
 
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "1") != 0) {
         elog(WARNING, "recv [%s,%d] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",
              data->socket_ip, data->socket_port, strerror(errno), errno, result);
         close(sockfd);
-        return 0;
+        return -1;
     }
 
     close(sockfd);
@@ -735,7 +735,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     //回收防止内存泄露
     pfree(buf);
 
-    return 1;
+    return 0;
 }
 
 
@@ -753,6 +753,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     char *schemaname;
     char *tablename;
+
+    int mod;
 
     AssertVariableIsOfType(&pg_decode_change, LogicalDecodeChangeCB);
 
@@ -884,7 +886,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     data->is_data_change = true;
 
 
-    int mod = data->nr_changes % data->batch_size;
+    mod = data->nr_changes % data->batch_size;
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if(mod == 1 || txn->nentries == 1){
             appendStringInfoCharMacro(ctx->out, '[');
@@ -1003,17 +1005,15 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     MemoryContextSwitchTo(old);
     MemoryContextReset(data->context);
 
+    //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if (mod == 0 || data->nr_changes >= txn->nentries) {
             appendStringInfoCharMacro(ctx->out, ']');
         }else{
-            appendStringInfoChar(ctx->out, ',');
+            appendStringInfoCharMacro(ctx->out, ',');
         }
-    }
-    //myupdate 转入socket 并将ctx->初始化 为事务数量
-    if (data->socket_port != 0 && data->socket_ip != NULL) {
         //传输值内容
-        while (send_by_socket(ctx, ctx->out->data) != 1) {
+        while (send_by_socket(ctx, ctx->out->data) != 0) {
             elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
             sleep(3);//单位秒
         }
