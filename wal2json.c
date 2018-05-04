@@ -492,14 +492,12 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
         /* Skip nulls iif printing key/identity */
 
         if (isnull && replident)
-            ReleaseSysCache(type_tuple);
             continue;
 
         if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval)) {
             /* TOAST value is not returned if include-unchanged-toast is specified */
             elog(DEBUG2, "column \"%s\" has an unchanged TOAST - excluding",
                  NameStr(attr->attname));
-            ReleaseSysCache(type_tuple);
             continue;
         }
 
