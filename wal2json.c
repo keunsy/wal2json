@@ -734,7 +734,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     char	   result[1];
 
     JsonDecodingData *data = ctx->output_plugin_private;
-
+    //目标信息设置
     dest_addr.sin_family=AF_INET;
     dest_addr.sin_port=htons(data->socket_port);
     dest_addr.sin_addr.s_addr=inet_addr(data->socket_ip);
@@ -743,6 +743,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     sockfd = socket(AF_INET,SOCK_STREAM,0);
 
 
+    //超时设置
     int error=-1, len;
     len = sizeof(int);
     struct timeval tm;
@@ -751,8 +752,10 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
 
     ioctl(sockfd, FIONBIO, &ul); //设置为非阻塞模式
 
+    elog(WARNING,"11111111");
+
     bool ret = false;
-    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr)) == -1){
+    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr)) < 0 ){
         tm.tv_sec = 10;
         tm.tv_usec = 0;
         FD_ZERO(&set);
@@ -764,6 +767,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
         } else ret = false;
     }else ret = true;
 
+ elog(WARNING,"2222222222");
     ul = 0;
     ioctl(sockfd, FIONBIO, &ul); //设置为阻塞模式
     if(!ret){
@@ -771,8 +775,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
         close(sockfd);
         return 0;
     }
-
-
+     elog(WARNING,"333333333333");
 //    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
 //        elog(WARNING, "connect [\"%s\",%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
 //        return 0;
