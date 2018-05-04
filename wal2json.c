@@ -738,13 +738,10 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     }
 
     close(sockfd);
-    elog(WARNING,"44444444444");
     initStringInfo(ctx->out);
-
-    elog(WARNING,"5555555555");
     //回收防止内存泄露
     pfree(buf);
-    elog(WARNING,"666666666");
+
     return 0;
 }
 
@@ -1015,7 +1012,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     MemoryContextSwitchTo(old);
     MemoryContextReset(data->context);
 
-    elog(WARNING,"111111111111111");
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if (mod == 0 || data->nr_changes >= txn->nentries) {
@@ -1025,10 +1021,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
                 elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
                 sleep(3);//单位秒
             }
-            elog(WARNING,"22222222222");
         }else{
             appendStringInfoCharMacro(ctx->out, ',');
-            elog(WARNING,"3333333333333");
         }
 
     }
