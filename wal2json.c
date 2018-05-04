@@ -741,10 +741,41 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
 
     sockfd = socket(AF_INET,SOCK_STREAM,0);
 
-    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
+
+    int error=-1, len;
+    len = sizeof(int);
+    timeval tm;
+    fd_set set;
+    unsigned long ul = 1;
+
+    ioctl(sockfd, FIONBIO, &ul); //设置为非阻塞模式
+
+    bool ret = false;
+    if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(serv_addr)) == -1){
+        tm.tv_set = 10;
+        tm.tv_uset = 0;
+        FD_ZERO(&set);
+        FD_SET(sockfd, &set);
+        if( select(sockfd+1, NULL, &set, NULL, &tm) > 0) {
+            getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len);
+            if(error == 0) ret = true;
+            else ret = false;
+        } else ret = false;
+    }else ret = true;
+
+    ul = 0;
+    ioctl(sockfd, FIONBIO, &ul); //设置为阻塞模式
+    if(!ret){
         elog(WARNING, "connect [\"%s\",%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
+        close(sockfd);
         return 0;
     }
+
+
+//    if(connect(sockfd,(struct sockaddr*)&dest_addr,sizeof(struct sockaddr)) < 0){
+//        elog(WARNING, "connect [\"%s\",%d] failed for \"%s\" ,errono: \"%d\"",data->socket_ip,data->socket_port, strerror(errno) , errno);
+//        return 0;
+//    }
 
     elog(DEBUG2, "connect success ,start send msg");
 
@@ -1054,7 +1085,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             strcat(buf, ctx->out->data);
             strcat(buf,"]");
             //传输值内容
-            while(send_by_socket(ctx , buf ) != 1);
+            while(send_by_socket(ctx , buf ) != 1){
+                elog(WARNING,"Send by socket failed ,start retry");
+            }
             //清空
             initStringInfo(ctx->out);
             //回收防止内存泄露
