@@ -732,6 +732,10 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
 	int sockfd;
     struct sockaddr_in dest_addr;
     char	   result[1];
+    int error=-1, len;
+    unsigned long ul = 1;
+    struct timeval tm;
+    fd_set set;
 
     JsonDecodingData *data = ctx->output_plugin_private;
     //目标信息设置
@@ -743,11 +747,6 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     sockfd = socket(AF_INET,SOCK_STREAM,0);
 
     //超时设置
-    int error=-1, len;
-    len = sizeof(int);
-    struct timeval tm;
-    fd_set set;
-    unsigned long ul = 1;
 
     //设置为非阻塞模式
     if(ioctl(sockfd, FIONBIO, &ul) < 0){
@@ -761,6 +760,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
         if (errno == EINPROGRESS) {
             tm.tv_sec = 10;
             tm.tv_usec = 0;
+            len = sizeof(int);
             FD_ZERO(&set);
             FD_SET(sockfd, &set);
             if(select(sockfd+1, NULL, &set, NULL, &tm) > 0) {
