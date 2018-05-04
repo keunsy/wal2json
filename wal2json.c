@@ -736,6 +736,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
     unsigned long ul = 1;
     struct timeval tm;
     fd_set set;
+    bool ret = false;
 
     JsonDecodingData *data = ctx->output_plugin_private;
     //目标信息设置
@@ -755,7 +756,7 @@ send_by_socket(LogicalDecodingContext *ctx ,char *buf)
         return 0;
     }
 
-    bool ret = false;
+
     if(connect(sockfd, (struct sockaddr *)&dest_addr, sizeof(struct sockaddr)) < 0 ){
         if (errno == EINPROGRESS) {
             tm.tv_sec = 10;
