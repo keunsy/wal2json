@@ -1080,8 +1080,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             strcat(buf,"]");
             //传输值内容
             while(send_by_socket(ctx , buf ) != 1){
-                sleep(3);//单位秒
                 elog(WARNING,"Send by socket [%s,%d] failed ,start retry",data->socket_ip,data->socket_port);
+                sleep(3);//单位秒
             }
             initStringInfo(ctx->out);
             //回收防止内存泄露
