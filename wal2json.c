@@ -1100,9 +1100,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             }
             elog(WARNING,"33333333");
             //回收防止内存泄露
-            if(buf != NULL){
-                pfree(buf);
-            }
+//            if(buf != NULL){
+//                pfree(buf);
+//            }
             elog(WARNING,"444444");
             //清空
             initStringInfo(ctx->out);
