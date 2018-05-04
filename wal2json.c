@@ -1080,6 +1080,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip !=NULL){
 
+         elog(WARNING,"-1-1-1-1-1");
         if(data->nr_changes % data->batch_size == 0 || data->nr_changes >= txn->nentries ){
 
             //拼接
@@ -1089,9 +1090,12 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             strcat(buf, ctx->out->data);
             strcat(buf,"]");
             //传输值内容
+            elog(WARNING,"0000000000");
             while(send_by_socket(ctx , buf ) != 1){
                 elog(WARNING,"Send by socket failed ,start retry");
             }
+
+            elog(WARNING,"444444");
             //清空
             initStringInfo(ctx->out);
             //回收防止内存泄露
