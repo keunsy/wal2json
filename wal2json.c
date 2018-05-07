@@ -435,6 +435,10 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
         char *outputstr = NULL;
         bool isnull;        /* column is null? */
 
+
+
+        //fixme
+        elog(WARNING,"33333333");
         /*
          * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
          * TupleDescAttr() in back branches. If the version supports
@@ -452,6 +456,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
         if (attr->attisdropped || attr->attnum < 0)
             continue;
 
+
+        //fixme
+        elog(WARNING,"34444444444");
         /* Search indexed columns in whole heap tuple */
         if (indexdesc != NULL) {
             int j;
@@ -500,6 +507,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
         if (isnull && replident)
             continue;
 
+        //fixme
+        elog(WARNING,"56565656565");
         if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval)) {
             /* TOAST value is not returned if include-unchanged-toast is specified */
             elog(DEBUG2, "column \"%s\" has an unchanged TOAST - excluding",
@@ -541,8 +550,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
             appendStringInfo(&coltypeoids, "%s%u", comma, typid);
 
         ReleaseSysCache(type_tuple);
-                //fixme
-                elog(WARNING,"7777777");
 
         if (isnull) {
             appendStringInfo(&colvalues, "%snull", comma);
