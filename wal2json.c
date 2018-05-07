@@ -732,9 +732,12 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-    if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
+    struct timeval timeout={3,0};
+    int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
 
-     elog(WARNING, "strcmp [%d] ", strcmp(result, "succ"));
+     elog(DEBUG2, "setRecvTimeOutResult %d",setRecvTimeOutResult);
+
+    if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
 
         elog(WARNING, "recv [%s,%d] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",
              data->socket_ip, data->socket_port, strerror(errno), errno, result);
