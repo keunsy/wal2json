@@ -435,10 +435,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
         char *outputstr = NULL;
         bool isnull;        /* column is null? */
 
-
-
-        //fixme
-        elog(WARNING,"33333333");
         /*
          * Commit d34a74dd064af959acd9040446925d9d53dff15b introduced
          * TupleDescAttr() in back branches. If the version supports
@@ -456,9 +452,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
         if (attr->attisdropped || attr->attnum < 0)
             continue;
 
-
-        //fixme
-        elog(WARNING,"34444444444");
         /* Search indexed columns in whole heap tuple */
         if (indexdesc != NULL) {
             int j;
@@ -486,9 +479,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
         typid = attr->atttypid;
 
-
-        //fixme
-        elog(WARNING,"44444444");
         /* Figure out type name */
         type_tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typid));
         if (!HeapTupleIsValid(type_tuple))
@@ -502,13 +492,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
         /* Skip nulls iif printing key/identity */
 
-        //fixme
-        elog(WARNING,"555555555");
-//        if (isnull && replident)
-//            continue;
+        if (isnull && replident)
+            continue;
 
-        //fixme
-        elog(WARNING,"56565656565");
         if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval)) {
             /* TOAST value is not returned if include-unchanged-toast is specified */
             elog(DEBUG2, "column \"%s\" has an unchanged TOAST - excluding",
@@ -516,8 +502,6 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
             continue;
         }
 
-        //fixme
-        elog(WARNING,"66666666666666");
         /* Accumulate each column info */
         appendStringInfoString(&colnames, comma);
         escape_json(&colnames, NameStr(attr->attname));
@@ -891,16 +875,14 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     mod = data->nr_changes % data->batch_size;
 
-//    fixme debug
-    elog(WARNING,"%lu , %d ,%d,%lu",data->nr_changes,data->batch_size,mod,txn->nentries);
+    elog(WARNING,"%lu , %d ,%d",data->nr_changes,data->batch_size);
 
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if(mod == 1 || txn->nentries == 1){
             appendStringInfoCharMacro(ctx->out, '[');
         }
     }
-//    fixme debug
-    elog(WARNING,"-1-1-1-1-11");
+
     /* Change starts */
     appendStringInfoCharMacro(ctx->out, '{');
 
@@ -953,9 +935,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     escape_json(ctx->out, NameStr(class_form->relname));
     appendStringInfoCharMacro(ctx->out, ',');
 
-
-//    fixme debug
-    elog(WARNING,"-12-12-1-21-11");
     switch (change->action) {
         case REORDER_BUFFER_CHANGE_INSERT:
             /* Print the new tuple */
@@ -1013,8 +992,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     appendStringInfoCharMacro(ctx->out, '}');
 
-        //fixme
-        elog(WARNING,"000000000");
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if (mod == 0 || data->nr_changes >= txn->nentries) {
@@ -1029,8 +1006,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         }
 
     }
-    //fixme
-    elog(WARNING,"11111111111");
 
     MemoryContextSwitchTo(old);
     MemoryContextReset(data->context);
