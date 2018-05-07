@@ -742,6 +742,13 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
     elog(DEBUG2, "connect success ,start send msg");
 
+
+        timeout.tv_sec=0;
+        timeout.tv_usec=10;
+        setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout.tv_sec,sizeof(timeout));
+        elog(WARNING, "set sockopt recv [%d]", setResult);
+
+
     if (send(sockfd, buf, strlen(buf), 0) < 0) {
         // 如果是error级别 将直接中断
         elog(WARNING, "send [%s,%d] failed for \"%s\" ,errono: \"%d\" ", data->socket_ip,
@@ -750,8 +757,6 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-    setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout.tv_sec,sizeof(timeout));
-    elog(WARNING, "set sockopt recv [%d]", setResult);
 
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
 
