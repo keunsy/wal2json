@@ -939,7 +939,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     }
     appendStringInfo(ctx->out, "\"slot_name\":\"%s\",", NameStr(ctx->slot->data.name));
 
-    //可能是串行执行 导致 重复
     appendStringInfo(ctx->out, "\"current_num\":\"%lu\",", data->nr_changes);
     appendStringInfo(ctx->out, "\"total_num\":\"%lu\",", txn->nentries);
 
