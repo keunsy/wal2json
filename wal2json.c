@@ -738,7 +738,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
                  data->socket_port, strerror(errno), errno);
     }
 
-   setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
+    setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
     elog(WARNING, "setsockopt rece [%d] failed", setResult);
 
 
@@ -752,8 +752,6 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-
-     elog(WARNING, "setRecvTimeOutResult %d",setRecvTimeOutResult);
 
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
 
