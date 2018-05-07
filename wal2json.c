@@ -655,19 +655,16 @@ identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple
 //myupdate 发送socket
 static int
 send_by_socket(LogicalDecodingContext *ctx, char *buf) {
+
     int sockfd;
     struct sockaddr_in dest_addr;
-
-    int error = -1, len;
-    unsigned long ul = 1;
-    struct timeval tm;
     fd_set set;
     bool ret = false;
 
+    struct timeval timeout={10,0};
     char result[] = "fail";
 
     JsonDecodingData *data = ctx->output_plugin_private;
-
 
     //目标信息设置
     dest_addr.sin_family = AF_INET;
@@ -678,60 +675,13 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
 
-        struct timeval timeout={10,0};
-        int setResult = setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
-        elog(WARNING, "set sockopt send [%d]", setResult);
-
-    //超时设置
-
-
-//    //设置为非阻塞模式
-//    if (ioctl(sockfd, FIONBIO, &ul) < 0) {
-//        close(sockfd);
-//        elog(WARNING, "ioctl 1 [%s,%d] failed", data->socket_ip, data->socket_port);
-//        return -1;
-//    }
-//
-//
-//
-//
-//    if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
-//        if (errno == EINPROGRESS) {
-//            tm.tv_sec = 10;
-//            tm.tv_usec = 0;
-//            len = sizeof(int);
-//            FD_ZERO(&set);
-//            FD_SET(sockfd, &set);
-//            if (select(sockfd + 1, NULL, &set, NULL, &tm) > 0) {
-//                getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t * ) & len);
-//                if (error == 0) {
-//                    ret = true;
-//                }
-//                else {
-//                    ret = false;
-//                }
-//            } else {
-//                ret = false;
-//            }
-//        }
-//    } else {
-//        ret = true;
-//    }
-//
-//    if (!ret) {
-//        elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
-//             data->socket_port, strerror(errno), errno);
-//        close(sockfd);
-//        return -1;
-//    }
-//    ul = 0;
-//    //设置为阻塞模式
-//    if (ioctl(sockfd, FIONBIO, &ul) < 0) {
-//        close(sockfd);
-//        elog(WARNING, "ioctl 0 [%s,%d] failed", data->socket_ip, data->socket_port);
-//        return -1;
-//    }
-
+    //连接发送超时设置
+    if(setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
+        elog(WARNING, "setsockopt [%s,%d] SO_SNDTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
+            data->socket_port, strerror(errno), errno);
+        close(sockfd);
+        return -1;
+    }
 
     if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
         elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
@@ -742,13 +692,14 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
     elog(DEBUG2, "connect success ,start send msg");
 
-
-        timeout.tv_sec=10;
-        timeout.tv_usec=0;
-        setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout.tv_sec,sizeof(timeout));
-        elog(WARNING, "set sockopt recv [%d]", setResult);
-
-
+    //接收超时设置
+    if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
+        elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
+            data->socket_port, strerror(errno), errno);
+        close(sockfd);
+        return -1;
+    }
+    //发送
     if (send(sockfd, buf, strlen(buf), 0) < 0) {
         // 如果是error级别 将直接中断
         elog(WARNING, "send [%s,%d] failed for \"%s\" ,errono: \"%d\" ", data->socket_ip,
@@ -757,7 +708,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-
+    //接收
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
 
         elog(WARNING, "recv [%s,%d] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",
