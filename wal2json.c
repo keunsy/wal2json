@@ -504,8 +504,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
         //fixme
         elog(WARNING,"555555555");
-        if (isnull && replident)
-            continue;
+//        if (isnull && replident)
+//            continue;
 
         //fixme
         elog(WARNING,"56565656565");
