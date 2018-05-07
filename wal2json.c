@@ -875,7 +875,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     mod = data->nr_changes % data->batch_size;
 
-    elog(WARNING,"%lu , %d ,%d",data->nr_changes,data->batch_size,mod);
+//    fixme debug
+    elog(WARNING,"%lu , %d ,%d,%lu",data->nr_changes,data->batch_size,mod,txn->nentries);
 
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if(mod == 1 || txn->nentries == 1){
@@ -992,6 +993,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     appendStringInfoCharMacro(ctx->out, '}');
 
+        //fixme
+        elog(WARNING,"000000000");
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if (mod == 0 || data->nr_changes >= txn->nentries) {
@@ -1006,6 +1009,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         }
 
     }
+    //fixme
+    elog(WARNING,"11111111111");
 
     MemoryContextSwitchTo(old);
     MemoryContextReset(data->context);
