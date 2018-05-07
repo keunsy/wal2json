@@ -721,6 +721,9 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
+    struct timeval timeout={10,0};
+    int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
+
 
     elog(DEBUG2, "connect success ,start send msg");
 
@@ -732,8 +735,6 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-    struct timeval timeout={10,0};
-    int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
 
      elog(WARNING, "setRecvTimeOutResult %d",setRecvTimeOutResult);
 
