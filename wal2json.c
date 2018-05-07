@@ -479,6 +479,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
         typid = attr->atttypid;
 
+
+        //fixme
+        elog(WARNING,"44444444");
         /* Figure out type name */
         type_tuple = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typid));
         if (!HeapTupleIsValid(type_tuple))
@@ -492,6 +495,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
         /* Skip nulls iif printing key/identity */
 
+        //fixme
+        elog(WARNING,"555555555");
         if (isnull && replident)
             continue;
 
@@ -502,6 +507,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
             continue;
         }
 
+        //fixme
+        elog(WARNING,"66666666666666");
         /* Accumulate each column info */
         appendStringInfoString(&colnames, comma);
         escape_json(&colnames, NameStr(attr->attname));
@@ -534,6 +541,8 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
             appendStringInfo(&coltypeoids, "%s%u", comma, typid);
 
         ReleaseSysCache(type_tuple);
+                //fixme
+                elog(WARNING,"7777777");
 
         if (isnull) {
             appendStringInfo(&colvalues, "%snull", comma);
