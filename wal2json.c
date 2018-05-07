@@ -346,7 +346,6 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn) {
 static void
 pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
                      XLogRecPtr commit_lsn) {
-
     JsonDecodingData *data = ctx->output_plugin_private;
 
     if (txn->has_catalog_changes)
@@ -656,15 +655,18 @@ identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple
 //myupdate 发送socket
 static int
 send_by_socket(LogicalDecodingContext *ctx, char *buf) {
-
     int sockfd;
     struct sockaddr_in dest_addr;
 
-    struct timeval timeout = {10,0};
+    int error = -1, len;
+    unsigned long ul = 1;
+    struct timeval tm;
+    fd_set set;
+    bool ret = false;
+
     char result[] = "fail";
 
     JsonDecodingData *data = ctx->output_plugin_private;
-
     //目标信息设置
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_port = htons(data->socket_port);
@@ -673,32 +675,55 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
+    //超时设置
 
-    //连接发送超时设置
-//    if(setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
-//        elog(WARNING, "setsockopt [%s,%d] SO_SNDTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
-//            data->socket_port, strerror(errno), errno);
-//        close(sockfd);
-//        return -1;
-//    }
+    //设置为非阻塞模式
+    if (ioctl(sockfd, FIONBIO, &ul) < 0) {
+        close(sockfd);
+        elog(WARNING, "ioctl 1 [%s,%d] failed", data->socket_ip, data->socket_port);
+        return -1;
+    }
 
     if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
+        if (errno == EINPROGRESS) {
+            tm.tv_sec = 10;
+            tm.tv_usec = 0;
+            len = sizeof(int);
+            FD_ZERO(&set);
+            FD_SET(sockfd, &set);
+            if (select(sockfd + 1, NULL, &set, NULL, &tm) > 0) {
+                getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t * ) & len);
+                if (error == 0) {
+                    ret = true;
+                }
+                else {
+                    ret = false;
+                }
+            } else {
+                ret = false;
+            }
+        }
+    } else {
+        ret = true;
+    }
+
+    if (!ret) {
         elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
-                 data->socket_port, strerror(errno), errno);
+             data->socket_port, strerror(errno), errno);
         close(sockfd);
         return -1;
     }
+    ul = 0;
+    //设置为阻塞模式
+    if (ioctl(sockfd, FIONBIO, &ul) < 0) {
+        close(sockfd);
+        elog(WARNING, "ioctl 0 [%s,%d] failed", data->socket_ip, data->socket_port);
+        return -1;
+    }
+
 
     elog(DEBUG2, "connect success ,start send msg");
 
-    //接收超时设置
-    if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
-        elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
-            data->socket_port, strerror(errno), errno);
-        close(sockfd);
-        return -1;
-    }
-    //发送
     if (send(sockfd, buf, strlen(buf), 0) < 0) {
         // 如果是error级别 将直接中断
         elog(WARNING, "send [%s,%d] failed for \"%s\" ,errono: \"%d\" ", data->socket_ip,
@@ -707,7 +732,6 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-    //接收
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
 
         elog(WARNING, "recv [%s,%d] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",
@@ -872,9 +896,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     data->is_data_change = true;
 
 
-
     mod = data->nr_changes % data->batch_size;
-
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if(mod == 1 || txn->nentries == 1){
             appendStringInfoCharMacro(ctx->out, '[');
@@ -990,11 +1012,13 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     appendStringInfoCharMacro(ctx->out, '}');
 
+    MemoryContextSwitchTo(old);
+    MemoryContextReset(data->context);
+
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if (mod == 0 || data->nr_changes >= txn->nentries) {
             appendStringInfoCharMacro(ctx->out, ']');
-
             //传输值内容
             while (send_by_socket(ctx, ctx->out->data) != 0) {
                 elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
@@ -1005,9 +1029,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         }
 
     }
-
-    MemoryContextSwitchTo(old);
-    MemoryContextReset(data->context);
 }
 
 #if    PG_VERSION_NUM >= 90600
