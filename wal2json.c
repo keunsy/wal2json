@@ -883,7 +883,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             appendStringInfoCharMacro(ctx->out, '[');
         }
     }
-
+//    fixme debug
+    elog(WARNING,"-1-1-1-1-11");
     /* Change starts */
     appendStringInfoCharMacro(ctx->out, '{');
 
@@ -936,6 +937,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     escape_json(ctx->out, NameStr(class_form->relname));
     appendStringInfoCharMacro(ctx->out, ',');
 
+
+//    fixme debug
+    elog(WARNING,"-12-12-1-21-11");
     switch (change->action) {
         case REORDER_BUFFER_CHANGE_INSERT:
             /* Print the new tuple */
