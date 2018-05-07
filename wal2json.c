@@ -740,7 +740,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     }
 
     close(sockfd);
-//    initStringInfo(ctx->out);
+    initStringInfo(ctx->out);
     //回收防止内存泄露
 //    pfree(buf);
 
