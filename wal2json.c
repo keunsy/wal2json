@@ -670,9 +670,9 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
 
 
-            struct timeval timeout={10,0};
-//            setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
-            int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
+    struct timeval timeout={10,0};
+    int setResult = setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
+    elog(WARNING, "setsockopt send [%d] failed", setResult);
 
     //目标信息设置
     dest_addr.sin_family = AF_INET;
@@ -733,10 +733,13 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 //    }
 
 
-if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
-elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
-             data->socket_port, strerror(errno), errno);
-}
+    if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
+    elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
+                 data->socket_port, strerror(errno), errno);
+    }
+
+   setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
+    elog(WARNING, "setsockopt rece [%d] failed", setResult);
 
 
     elog(DEBUG2, "connect success ,start send msg");
