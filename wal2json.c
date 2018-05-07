@@ -657,7 +657,7 @@ static int
 send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     int sockfd;
     struct sockaddr_in dest_addr;
-    char result[1];
+    char result[4];
     int error = -1, len;
     unsigned long ul = 1;
     struct timeval tm;
