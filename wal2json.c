@@ -680,7 +680,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
         struct timeval timeout={10,0};
         int setResult = setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
-        elog(WARNING, "setsockopt send [%d]", setResult);
+        elog(WARNING, "set sockopt send [%d]", setResult);
 
     //超时设置
 
@@ -740,10 +740,6 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-    setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
-    elog(WARNING, "set sockopt recv [%d]", setResult);
-
-
     elog(DEBUG2, "connect success ,start send msg");
 
     if (send(sockfd, buf, strlen(buf), 0) < 0) {
@@ -754,6 +750,8 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
+    setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
+    elog(WARNING, "set sockopt recv [%d]", setResult);
 
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
 
