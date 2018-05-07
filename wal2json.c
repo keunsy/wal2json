@@ -667,6 +667,13 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     char result[] = "fail";
 
     JsonDecodingData *data = ctx->output_plugin_private;
+
+
+
+            struct timeval timeout={10,0};
+            setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
+            int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
+
     //目标信息设置
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_port = htons(data->socket_port);
@@ -678,55 +685,58 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     //超时设置
 
 
-    //设置为非阻塞模式
-    if (ioctl(sockfd, FIONBIO, &ul) < 0) {
-        close(sockfd);
-        elog(WARNING, "ioctl 1 [%s,%d] failed", data->socket_ip, data->socket_port);
-        return -1;
-    }
+//    //设置为非阻塞模式
+//    if (ioctl(sockfd, FIONBIO, &ul) < 0) {
+//        close(sockfd);
+//        elog(WARNING, "ioctl 1 [%s,%d] failed", data->socket_ip, data->socket_port);
+//        return -1;
+//    }
+//
+//
+//
+//
+//    if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
+//        if (errno == EINPROGRESS) {
+//            tm.tv_sec = 10;
+//            tm.tv_usec = 0;
+//            len = sizeof(int);
+//            FD_ZERO(&set);
+//            FD_SET(sockfd, &set);
+//            if (select(sockfd + 1, NULL, &set, NULL, &tm) > 0) {
+//                getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t * ) & len);
+//                if (error == 0) {
+//                    ret = true;
+//                }
+//                else {
+//                    ret = false;
+//                }
+//            } else {
+//                ret = false;
+//            }
+//        }
+//    } else {
+//        ret = true;
+//    }
+//
+//    if (!ret) {
+//        elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
+//             data->socket_port, strerror(errno), errno);
+//        close(sockfd);
+//        return -1;
+//    }
+//    ul = 0;
+//    //设置为阻塞模式
+//    if (ioctl(sockfd, FIONBIO, &ul) < 0) {
+//        close(sockfd);
+//        elog(WARNING, "ioctl 0 [%s,%d] failed", data->socket_ip, data->socket_port);
+//        return -1;
+//    }
 
 
-            struct timeval timeout={10,0};
-            setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
-            int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
-
-
-    if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
-        if (errno == EINPROGRESS) {
-            tm.tv_sec = 10;
-            tm.tv_usec = 0;
-            len = sizeof(int);
-            FD_ZERO(&set);
-            FD_SET(sockfd, &set);
-            if (select(sockfd + 1, NULL, &set, NULL, &tm) > 0) {
-                getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, (socklen_t * ) & len);
-                if (error == 0) {
-                    ret = true;
-                }
-                else {
-                    ret = false;
-                }
-            } else {
-                ret = false;
-            }
-        }
-    } else {
-        ret = true;
-    }
-
-    if (!ret) {
-        elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
+if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
+elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
              data->socket_port, strerror(errno), errno);
-        close(sockfd);
-        return -1;
-    }
-    ul = 0;
-    //设置为阻塞模式
-    if (ioctl(sockfd, FIONBIO, &ul) < 0) {
-        close(sockfd);
-        elog(WARNING, "ioctl 0 [%s,%d] failed", data->socket_ip, data->socket_port);
-        return -1;
-    }
+}
 
 
     elog(DEBUG2, "connect success ,start send msg");
