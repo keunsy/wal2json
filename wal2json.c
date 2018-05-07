@@ -346,6 +346,7 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn) {
 static void
 pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
                      XLogRecPtr commit_lsn) {
+
     JsonDecodingData *data = ctx->output_plugin_private;
 
     if (txn->has_catalog_changes)
@@ -987,9 +988,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     appendStringInfoCharMacro(ctx->out, '}');
 
-    MemoryContextSwitchTo(old);
-    MemoryContextReset(data->context);
-
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if (mod == 0 || data->nr_changes >= txn->nentries) {
@@ -1004,6 +1002,9 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         }
 
     }
+
+    MemoryContextSwitchTo(old);
+    MemoryContextReset(data->context);
 }
 
 #if    PG_VERSION_NUM >= 90600
