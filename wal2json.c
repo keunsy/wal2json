@@ -680,7 +680,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
         struct timeval timeout={10,0};
         int setResult = setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
-        elog(WARNING, "setsockopt send [%d] failed", setResult);
+        elog(WARNING, "setsockopt send [%d]", setResult);
 
     //超时设置
 
@@ -734,12 +734,14 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
 
     if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
-    elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
+        elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
                  data->socket_port, strerror(errno), errno);
+        close(sockfd);
+        return -1;
     }
 
     setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
-    elog(WARNING, "setsockopt rece [%d] failed", setResult);
+    elog(WARNING, "set sockopt recv [%d]", setResult);
 
 
     elog(DEBUG2, "connect success ,start send msg");
