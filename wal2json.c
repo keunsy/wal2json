@@ -658,10 +658,8 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
     int sockfd;
     struct sockaddr_in dest_addr;
-    fd_set set;
-    bool ret = false;
 
-    struct timeval timeout={10,0};
+    struct timeval timeout = {10,0};
     char result[] = "fail";
 
     JsonDecodingData *data = ctx->output_plugin_private;
