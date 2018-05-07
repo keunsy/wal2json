@@ -722,12 +722,12 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     }
 
 
-//        if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&tm,sizeof(tm)) < 0 ){
-//            elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
-//                data->socket_port, strerror(errno), errno);
-//            close(sockfd);
-//            return -1;
-//        }
+        if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&tm,sizeof(tm)) < 0 ){
+            elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
+                data->socket_port, strerror(errno), errno);
+            close(sockfd);
+            return -1;
+        }
 
     elog(DEBUG2, "connect success ,start send msg");
 
