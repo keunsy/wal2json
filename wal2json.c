@@ -676,6 +676,8 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     //超时设置
+        struct timeval timeout={10,0};
+        int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
 
     //设置为非阻塞模式
     if (ioctl(sockfd, FIONBIO, &ul) < 0) {
@@ -720,9 +722,6 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         elog(WARNING, "ioctl 0 [%s,%d] failed", data->socket_ip, data->socket_port);
         return -1;
     }
-
-    struct timeval timeout={10,0};
-    int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
 
 
     elog(DEBUG2, "connect success ,start send msg");
