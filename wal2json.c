@@ -669,11 +669,6 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     JsonDecodingData *data = ctx->output_plugin_private;
 
 
-
-    struct timeval timeout={10,0};
-    int setResult = setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
-    elog(WARNING, "setsockopt send [%d] failed", setResult);
-
     //目标信息设置
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_port = htons(data->socket_port);
@@ -681,6 +676,11 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     bzero(&(dest_addr.sin_zero), 8);
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+
+        struct timeval timeout={10,0};
+        int setResult = setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
+        elog(WARNING, "setsockopt send [%d] failed", setResult);
 
     //超时设置
 
