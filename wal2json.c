@@ -677,6 +677,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
     //超时设置
         struct timeval timeout={10,0};
+        setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
         int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
 
     //设置为非阻塞模式
