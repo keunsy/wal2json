@@ -675,12 +675,12 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
 
     //连接发送超时设置
-//    if(setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
-//        elog(WARNING, "setsockopt [%s,%d] SO_SNDTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
-//            data->socket_port, strerror(errno), errno);
-//        close(sockfd);
-//        return -1;
-//    }
+    if(setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
+        elog(WARNING, "setsockopt [%s,%d] SO_SNDTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
+            data->socket_port, strerror(errno), errno);
+        close(sockfd);
+        return -1;
+    }
 
     if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
         elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
@@ -692,12 +692,12 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     elog(DEBUG2, "connect success ,start send msg");
 
     //接收超时设置
-//    if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
-//        elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
-//            data->socket_port, strerror(errno), errno);
-//        close(sockfd);
-//        return -1;
-//    }
+    if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
+        elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
+            data->socket_port, strerror(errno), errno);
+        close(sockfd);
+        return -1;
+    }
     //发送
     if (send(sockfd, buf, strlen(buf), 0) < 0) {
         // 如果是error级别 将直接中断
@@ -994,11 +994,13 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if (mod == 0 || data->nr_changes >= txn->nentries) {
             appendStringInfoCharMacro(ctx->out, ']');
+
+            elog(WARNING,ctx, ctx->out->data);
             //传输值内容
-            while (send_by_socket(ctx, ctx->out->data) != 0) {
-                elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
-                sleep(3);//单位秒
-            }
+//            while (send_by_socket(ctx, ctx->out->data) != 0) {
+//                elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
+//                sleep(3);//单位秒
+//            }
         }else{
             appendStringInfoCharMacro(ctx->out, ',');
         }
