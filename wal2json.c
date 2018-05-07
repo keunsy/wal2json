@@ -730,7 +730,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-
+    result = "fail";
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
 
      elog(WARNING, "strcmp [%d] ", strcmp(result, "succ"));
