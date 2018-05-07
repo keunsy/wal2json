@@ -675,12 +675,12 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
 
     //连接发送超时设置
-    if(setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
-        elog(WARNING, "setsockopt [%s,%d] SO_SNDTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
-            data->socket_port, strerror(errno), errno);
-        close(sockfd);
-        return -1;
-    }
+//    if(setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
+//        elog(WARNING, "setsockopt [%s,%d] SO_SNDTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
+//            data->socket_port, strerror(errno), errno);
+//        close(sockfd);
+//        return -1;
+//    }
 
     if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
         elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
@@ -692,12 +692,12 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     elog(DEBUG2, "connect success ,start send msg");
 
     //接收超时设置
-    if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
-        elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
-            data->socket_port, strerror(errno), errno);
-        close(sockfd);
-        return -1;
-    }
+//    if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
+//        elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
+//            data->socket_port, strerror(errno), errno);
+//        close(sockfd);
+//        return -1;
+//    }
     //发送
     if (send(sockfd, buf, strlen(buf), 0) < 0) {
         // 如果是error级别 将直接中断
@@ -874,8 +874,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
 
     mod = data->nr_changes % data->batch_size;
-
-    elog(WARNING,"%lu , %d ,%d,%lu",data->nr_changes,data->batch_size,mod,txn->nentries);
 
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if(mod == 1 || txn->nentries == 1){
