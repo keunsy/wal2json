@@ -657,12 +657,14 @@ static int
 send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     int sockfd;
     struct sockaddr_in dest_addr;
-    char result[4];
+
     int error = -1, len;
     unsigned long ul = 1;
     struct timeval tm;
     fd_set set;
     bool ret = false;
+
+    char result[] = "fail";
 
     JsonDecodingData *data = ctx->output_plugin_private;
     //目标信息设置
@@ -730,7 +732,6 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-    result = {'f','a','i','l'};
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
 
      elog(WARNING, "strcmp [%d] ", strcmp(result, "succ"));
