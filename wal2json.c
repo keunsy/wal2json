@@ -730,7 +730,11 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
+
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
+
+     elog(WARNING, "strcmp [%d] ", strcmp(result, "succ"));
+
         elog(WARNING, "recv [%s,%d] failed for \"%s\" ,errono: \"%d\" ,result: \"%s\"",
              data->socket_ip, data->socket_port, strerror(errno), errno, result);
         close(sockfd);
