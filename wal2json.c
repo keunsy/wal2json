@@ -995,12 +995,11 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         if (mod == 0 || data->nr_changes >= txn->nentries) {
             appendStringInfoCharMacro(ctx->out, ']');
 
-            elog(WARNING, "%s",ctx->out->data);
             //传输值内容
-//            while (send_by_socket(ctx, ctx->out->data) != 0) {
-//                elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
-//                sleep(3);//单位秒
-//            }
+            while (send_by_socket(ctx, ctx->out->data) != 0) {
+                elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
+                sleep(3);//单位秒
+            }
         }else{
             appendStringInfoCharMacro(ctx->out, ',');
         }
