@@ -732,10 +732,10 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
         return -1;
     }
 
-    struct timeval timeout={3,0};
+    struct timeval timeout={10,0};
     int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
 
-     elog(DEBUG2, "setRecvTimeOutResult %d",setRecvTimeOutResult);
+     elog(WARNING, "setRecvTimeOutResult %d",setRecvTimeOutResult);
 
     if (recv(sockfd, result, sizeof(result), 0) < 0 || strcmp(result, "succ") != 0) {
 
