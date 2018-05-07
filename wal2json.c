@@ -743,8 +743,8 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     elog(DEBUG2, "connect success ,start send msg");
 
 
-        timeout.tv_sec=0;
-        timeout.tv_usec=10;
+        timeout.tv_sec=10;
+        timeout.tv_usec=0;
         setResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout.tv_sec,sizeof(timeout));
         elog(WARNING, "set sockopt recv [%d]", setResult);
 
