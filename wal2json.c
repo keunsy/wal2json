@@ -671,7 +671,7 @@ send_by_socket(LogicalDecodingContext *ctx, char *buf) {
 
 
             struct timeval timeout={10,0};
-            setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
+//            setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout));
             int setRecvTimeOutResult = setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout));
 
     //目标信息设置
