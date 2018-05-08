@@ -490,7 +490,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
         origval = heap_getattr(tuple, natt + 1, tupdesc, &isnull);
 
         /* Skip nulls iif printing key/identity */
-        //fixme 临时屏蔽 避免过慢问题
+        //屏蔽 避免过慢问题 具体原因未知，ReleaseSysCache 引起
 //        if (isnull && replident)
 //            continue;
 
