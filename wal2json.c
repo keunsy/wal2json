@@ -654,7 +654,7 @@ identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple
 
 //myupdate 发送socket
 static int
-send_by_socket(LogicalDecodingContext *ctx, char *buf) {
+send_by_socket(LogicalDecodingContext *ctx, char buf) {
     int sockfd;
     struct sockaddr_in dest_addr;
 
