@@ -658,7 +658,7 @@ send_by_socket(LogicalDecodingContext *ctx) {
     int sockfd;
     struct sockaddr_in dest_addr;
 
-    struct timeval timeout = {10,0};
+    struct timeval timeout = {10, 0};
     char result[] = "fail";
 
     JsonDecodingData *data = ctx->output_plugin_private;
@@ -674,16 +674,17 @@ send_by_socket(LogicalDecodingContext *ctx) {
     //超时设置
 
     //连接发送超时设置
-    if(setsockopt(sockfd,SOL_SOCKET,SO_SNDTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
-        elog(WARNING, "setsockopt [%s,%d] SO_SNDTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
-            data->socket_port, strerror(errno), errno);
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char *) &timeout, sizeof(timeout)) < 0) {
+        elog(WARNING, "setsockopt [%s,%d] SO_SNDTIMEO faild for \"%s\" ,errono: \"%d\"",
+             data->socket_ip,
+             data->socket_port, strerror(errno), errno);
         close(sockfd);
         return -1;
     }
 
     if (connect(sockfd, (struct sockaddr *) &dest_addr, sizeof(struct sockaddr)) < 0) {
         elog(WARNING, "connect [%s,%d] failed for \"%s\" ,errono: \"%d\"", data->socket_ip,
-                 data->socket_port, strerror(errno), errno);
+             data->socket_port, strerror(errno), errno);
         close(sockfd);
         return -1;
     }
@@ -691,9 +692,10 @@ send_by_socket(LogicalDecodingContext *ctx) {
     elog(DEBUG2, "connect success ,start send msg");
 
     //接收超时设置
-    if(setsockopt(sockfd,SOL_SOCKET,SO_RCVTIMEO,(const char*)&timeout,sizeof(timeout)) < 0 ){
-        elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",data->socket_ip,
-            data->socket_port, strerror(errno), errno);
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *) &timeout, sizeof(timeout)) < 0) {
+        elog(WARNING, "setsockopt [%s,%d] SO_RCVTIMEO faild for \"%s\" ,errono: \"%d\"",
+             data->socket_ip,
+             data->socket_port, strerror(errno), errno);
         close(sockfd);
         return -1;
     }
@@ -869,7 +871,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     mod = data->nr_changes % data->batch_size;
     if (data->socket_port != 0 && data->socket_ip != NULL) {
-        if(data->batch_size == 1 || mod == 1 || txn->nentries == 1){
+        if (data->batch_size == 1 || mod == 1 || txn->nentries == 1) {
             appendStringInfoCharMacro(ctx->out, '[');
         }
     }
@@ -988,12 +990,13 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
             appendStringInfoCharMacro(ctx->out, ']');
             //传输值内容
             while (send_by_socket(ctx) != 0) {
-                elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
+                elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip,
+                     data->socket_port);
                 sleep(3);//单位秒
             }
             // initStringInfo(ctx->out); 使用此方法内部需要申请空间，会造成错误，详细原因未知
             resetStringInfo(ctx->out);
-        }else{
+        } else {
             appendStringInfoCharMacro(ctx->out, ',');
         }
     }
