@@ -895,7 +895,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     mod = data->nr_changes % data->batch_size;
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if(data->batch_size == 1 || mod == 1 || txn->nentries == 1){
-            initStringInfo(ctx->out);
             appendStringInfoCharMacro(ctx->out, '[');
         }
     }
