@@ -894,9 +894,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     mod = data->nr_changes % data->batch_size;
     if (data->socket_port != 0 && data->socket_ip != NULL) {
-        elog(WARNING,"11111111 %s",ctx->out->data);
-        initStringInfo(ctx->out);
         if(data->batch_size == 1 || mod == 1 || txn->nentries == 1){
+            initStringInfo(ctx->out);
             appendStringInfoCharMacro(ctx->out, '[');
         }
     }
@@ -1013,8 +1012,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     if (data->socket_port != 0 && data->socket_ip != NULL) {
         if (data->batch_size == 1 || mod == 0 || data->nr_changes >= txn->nentries) {
             appendStringInfoCharMacro(ctx->out, ']');
-
-            elog(WARNING,"%s",ctx->out->data);
             //传输值内容
             while (send_by_socket(ctx) != 0) {
                 elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
