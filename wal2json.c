@@ -740,7 +740,6 @@ send_by_socket(LogicalDecodingContext *ctx) {
     }
 
     close(sockfd);
-//    initStringInfo(ctx->out);
 
     return 0;
 }
@@ -895,6 +894,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     mod = data->nr_changes % data->batch_size;
     if (data->socket_port != 0 && data->socket_ip != NULL) {
+        initStringInfo(ctx->out);
         if(mod == 1 || txn->nentries == 1 || data-> batch_size == 1){
             appendStringInfoCharMacro(ctx->out, '[');
         }
