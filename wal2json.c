@@ -1016,7 +1016,8 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
                 elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
                 sleep(3);//单位秒
             }
-            initStringInfo(ctx->out);
+//            initStringInfo(ctx->out);
+            resetStringInfo(ctx->out);
         }else{
             appendStringInfoCharMacro(ctx->out, ',');
         }
