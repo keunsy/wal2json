@@ -654,7 +654,7 @@ identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple
 
 //myupdate 发送socket
 static int
-send_by_socket(LogicalDecodingContext *ctx, char buf) {
+send_by_socket(LogicalDecodingContext *ctx, char *buf) {
     int sockfd;
     struct sockaddr_in dest_addr;
 
@@ -740,9 +740,6 @@ send_by_socket(LogicalDecodingContext *ctx, char buf) {
     }
 
     close(sockfd);
-    initStringInfo(ctx->out);
-    //回收防止内存泄露
-    pfree(buf);
 
     return 0;
 }
@@ -1019,6 +1016,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
                 elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
                 sleep(3);//单位秒
             }
+            initStringInfo(ctx->out);
         }else{
             appendStringInfoCharMacro(ctx->out, ',');
         }
