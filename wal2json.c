@@ -654,7 +654,7 @@ identity_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple
 
 //myupdate 发送socket
 static int
-send_by_socket(LogicalDecodingContext *ctx, StringInfoData ctx_out) {
+send_by_socket(LogicalDecodingContext *ctx) {
     int sockfd;
     struct sockaddr_in dest_addr;
 
@@ -723,7 +723,7 @@ send_by_socket(LogicalDecodingContext *ctx, StringInfoData ctx_out) {
 
     elog(DEBUG2, "connect success ,start send msg");
 
-    if (send(sockfd, ctx_out->data, strlen(ctx_out->data), 0) < 0) {
+    if (send(sockfd, ctx->out->data, strlen(ctx->out->data), 0) < 0) {
         // 如果是error级别 将直接中断
         elog(WARNING, "send [%s,%d] failed for \"%s\" ,errono: \"%d\" ", data->socket_ip,
              data->socket_port, strerror(errno), errno);
@@ -1013,7 +1013,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
         if (mod == 0 || data->nr_changes >= txn->nentries || data->batch_size == 1) {
             appendStringInfoCharMacro(ctx->out, ']');
             //传输值内容
-            while (send_by_socket(ctx, ctx->out) != 0) {
+            while (send_by_socket(ctx) != 0) {
                 elog(WARNING, "Send by socket [%s,%d] failed ,start retry", data->socket_ip , data->socket_port);
                 sleep(3);//单位秒
             }
