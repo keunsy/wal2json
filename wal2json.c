@@ -740,7 +740,7 @@ send_by_socket(LogicalDecodingContext *ctx) {
     }
 
     close(sockfd);
-    initStringInfo(ctx->out);
+//    initStringInfo(ctx->out);
 
     return 0;
 }
