@@ -362,8 +362,8 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     }
 
     if (data->socket_port != 0 && data->socket_ip != NULL) {
-        appendStringInfo(ctx->out, "total_num : %lu , commitTimestamp : %s", txn->nentries,
-                         timestamptz_to_str(txn->commit_time));
+        appendStringInfo(ctx->out, "total_num : %lu , commitTimestamp : %s ,nr_changes : %lu ,nentries_mem : %lu", txn->nentries,
+                         timestamptz_to_str(txn->commit_time),data->nr_changes,txn->nentries_mem);
     }
     OutputPluginWrite(ctx, true);
 
