@@ -491,8 +491,9 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
 
         /* Skip nulls iif printing key/identity */
         //屏蔽 避免过慢问题 具体原因未知，ReleaseSysCache 引起
-//        if (isnull && replident)
-//            continue;
+        if (isnull){
+            continue;
+        }
 
         if (!isnull && typisvarlena && VARATT_IS_EXTERNAL_ONDISK(origval)) {
             /* TOAST value is not returned if include-unchanged-toast is specified */
