@@ -744,16 +744,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     int mod;
 
-    /* Change counter */
-    data->decode_change_count++;
-
-    mod = data->decode_change_count % data->batch_size;
-    if (data->socket_port != 0 && data->socket_ip != NULL) {
-        if (data->batch_size == 1 || mod == 1 || txn->nentries == 1) {
-            appendStringInfoCharMacro(ctx->out, '[');
-        }
-    }
-
     AssertVariableIsOfType(&pg_decode_change, LogicalDecodeChangeCB);
 
     data = ctx->output_plugin_private;
@@ -770,6 +760,15 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     /* Make sure rd_replidindex is set */
     RelationGetIndexList(relation);
+
+    data->decode_change_count++;
+
+    mod = data->decode_change_count % data->batch_size;
+    if (data->socket_port != 0 && data->socket_ip != NULL) {
+        if (data->batch_size == 1 || mod == 1 || txn->nentries == 1) {
+            appendStringInfoCharMacro(ctx->out, '[');
+        }
+    }
 
     /* Sanity checks */
     switch (change->action) {
