@@ -1002,7 +1002,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
                 sleep(3);//单位秒
             }
             // initStringInfo(ctx->out); 使用此方法内部需要申请空间，会造成错误，详细原因未知
-            pfree(ctx->out->data);
             resetStringInfo(ctx->out);
         } else {
             appendStringInfoCharMacro(ctx->out, ',');
