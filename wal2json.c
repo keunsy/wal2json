@@ -492,6 +492,7 @@ tuple_to_stringinfo(LogicalDecodingContext *ctx, TupleDesc tupdesc, HeapTuple tu
         /* Skip nulls iif printing key/identity */
         //屏蔽 避免过慢问题 具体原因未知，ReleaseSysCache 引起
         if (isnull){
+            ReleaseSysCache(type_tuple);
             continue;
         }
 
