@@ -58,6 +58,7 @@ typedef struct {
      * 自定义变量（非选项信息）
      */
     uint64 nr_changes;            /* # of passes in pg_decode_change() */
+    uint64 decode_change_count;   /* # pg_decode_change execute times */
     /* FIXME replace with txn->nentries */
     bool is_data_change;            /* 数据是否进行了变更 */
     int socket_port;        /*socket connect server port */
@@ -336,6 +337,8 @@ pg_decode_begin_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn) {
 
     data->nr_changes = 0;
 
+    data->decode_change_count = 0;
+
     data->is_data_change = false;
 
     OutputPluginPrepareWrite(ctx, true);
@@ -362,8 +365,8 @@ pg_decode_commit_txn(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     }
 
     if (data->socket_port != 0 && data->socket_ip != NULL) {
-        appendStringInfo(ctx->out, "total_num : %lu , commitTimestamp : %s ,nr_changes : %lu ,nentries_mem : %lu", txn->nentries,
-                         timestamptz_to_str(txn->commit_time),data->nr_changes,txn->nentries_mem);
+        appendStringInfo(ctx->out, "total_num : %lu , commitTimestamp : %s ,nr_changes : %lu ,decode_change_count : %lu", txn->nentries,
+                         timestamptz_to_str(txn->commit_time),data->nr_changes,data->decode_change_count);
     }
     OutputPluginWrite(ctx, true);
 
@@ -741,6 +744,16 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     int mod;
 
+    /* Change counter */
+    data->decode_change_count++;
+
+    mod = data->decode_change_count % data->batch_size;
+    if (data->socket_port != 0 && data->socket_ip != NULL) {
+        if (data->batch_size == 1 || mod == 1 || txn->nentries == 1) {
+            appendStringInfoCharMacro(ctx->out, '[');
+        }
+    }
+
     AssertVariableIsOfType(&pg_decode_change, LogicalDecodeChangeCB);
 
     data = ctx->output_plugin_private;
@@ -871,13 +884,6 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
     data->is_data_change = true;
 
 
-    mod = data->nr_changes % data->batch_size;
-    if (data->socket_port != 0 && data->socket_ip != NULL) {
-        if (data->batch_size == 1 || mod == 1 || txn->nentries == 1) {
-            appendStringInfoCharMacro(ctx->out, '[');
-        }
-    }
-
     /* Change starts */
     appendStringInfoCharMacro(ctx->out, '{');
 
@@ -988,7 +994,7 @@ pg_decode_change(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 
     //myupdate 转入socket 并将ctx->初始化 为事务数量
     if (data->socket_port != 0 && data->socket_ip != NULL) {
-        if (data->batch_size == 1 || mod == 0 || data->nr_changes >= txn->nentries) {
+        if (data->batch_size == 1 || mod == 0 || data->decode_change_count >= txn->nentries) {
             appendStringInfoCharMacro(ctx->out, ']');
             //传输值内容
             while (send_by_socket(ctx) != 0) {
